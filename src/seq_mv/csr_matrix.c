@@ -44,6 +44,17 @@ hypre_CSRMatrixCreate( HYPRE_Int num_rows,
    hypre_CSRMatrixOwnsData(matrix)  = 1;
    hypre_CSRMatrixNumRownnz(matrix) = num_rows;
 
+#if defined(HYPRE_USING_CUDA)
+   hypre_CSRMatrixLower(matrix)                  = NULL;
+   hypre_CSRMatrixCusparseDataLower(matrix)      = NULL;
+   hypre_CSRMatrixUpper(matrix)                  = NULL;
+   hypre_CSRMatrixCusparseDataUpper(matrix)      = NULL;
+   hypre_CSRMatrixDiagonal(matrix)               = NULL;
+   hypre_CSRMatrixWorkVector(matrix)             = NULL;
+   hypre_CSRMatrixWorkVector2(matrix)             = NULL;
+   hypre_CSRMatrixRebuildTriMats(matrix)         = 1;
+   hypre_CSRMatrixRebuildTriSolves(matrix)       = 1;
+#endif
    return matrix;
 }
 
@@ -69,6 +80,39 @@ hypre_CSRMatrixDestroy( hypre_CSRMatrix *matrix )
          hypre_TFree(hypre_CSRMatrixJ(matrix),    memory_location);
          hypre_TFree(hypre_CSRMatrixBigJ(matrix), memory_location);
       }
+
+#if defined(HYPRE_USING_CUDA)
+      /* Only free if these objects have been allocated */
+      if (hypre_CSRMatrixLower(matrix)) {
+	hypre_CSRMatrixDestroy((hypre_CSRMatrix *)hypre_CSRMatrixLower(matrix));
+	hypre_CSRMatrixLower(matrix) = NULL;
+      }
+	
+      if (hypre_CSRMatrixUpper(matrix)) {
+	hypre_CSRMatrixDestroy((hypre_CSRMatrix *)hypre_CSRMatrixUpper(matrix));
+	hypre_CSRMatrixUpper(matrix) = NULL;
+      }
+
+      /* call the method in csr_mat_sptrisolve_device */
+      hypre_CSRMatrixDestroyTriMatsSolveDataDevice(matrix);
+
+      /* free the diagonal */
+      if (hypre_CSRMatrixDiagonal(matrix)) {
+	hypre_TFree(hypre_CSRMatrixDiagonal(matrix), memory_location);
+	hypre_CSRMatrixDiagonal(matrix) = NULL;
+      }
+
+      /* free the work vector */
+      if (hypre_CSRMatrixWorkVector(matrix)) {
+	hypre_TFree(hypre_CSRMatrixWorkVector(matrix), memory_location);
+	hypre_CSRMatrixWorkVector(matrix) = NULL;
+      }
+
+      if (hypre_CSRMatrixWorkVector2(matrix)) {
+	hypre_TFree(hypre_CSRMatrixWorkVector2(matrix), memory_location);
+	hypre_CSRMatrixWorkVector2(matrix) = NULL;
+      } 
+#endif
 
       hypre_TFree(matrix, HYPRE_MEMORY_HOST);
    }
@@ -132,6 +176,10 @@ hypre_CSRMatrixInitialize_v2( hypre_CSRMatrix *matrix, HYPRE_Int bigInit, HYPRE_
       }
    }
 
+#if defined(HYPRE_USING_CUDA)
+   hypre_CSRMatrixRebuildTriMats(matrix) = 1;
+   hypre_CSRMatrixRebuildTriSolves(matrix) = 1;
+#endif
    return ierr;
 }
 

@@ -1073,6 +1073,25 @@ HYPRE_Int HYPRE_ParCSRCOGMRESGetFinalRelativeResidualNorm ( HYPRE_Solver solver 
 HYPRE_Int HYPRE_ParCSRCOGMRESGetResidual ( HYPRE_Solver solver , HYPRE_ParVector *residual );
 
 
+/*HYPRE_parcsr_cogmres_v2.c*/
+HYPRE_Int HYPRE_ParCSRCOGMRESv2Create ( MPI_Comm comm , HYPRE_Solver *solver );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2Destroy ( HYPRE_Solver solver );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2Setup ( HYPRE_Solver solver , HYPRE_ParCSRMatrix A , HYPRE_ParVector b , HYPRE_ParVector x );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2Solve ( HYPRE_Solver solver , HYPRE_ParCSRMatrix A , HYPRE_ParVector b , HYPRE_ParVector x );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetKDim ( HYPRE_Solver solver , HYPRE_Int k_dim );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetCGS2 ( HYPRE_Solver solver , HYPRE_Int cgs2 );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetTol ( HYPRE_Solver solver , HYPRE_Real tol );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetAbsoluteTol ( HYPRE_Solver solver , HYPRE_Real a_tol );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetMinIter ( HYPRE_Solver solver , HYPRE_Int min_iter );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetMaxIter ( HYPRE_Solver solver , HYPRE_Int max_iter );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetPrecond ( HYPRE_Solver solver , HYPRE_PtrToParSolverFcn precond , HYPRE_PtrToParSolverFcn precond_setup , HYPRE_Solver precond_solver );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2GetPrecond ( HYPRE_Solver solver , HYPRE_Solver *precond_data_ptr );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetLogging ( HYPRE_Solver solver , HYPRE_Int logging );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2SetPrintLevel ( HYPRE_Solver solver , HYPRE_Int print_level );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2GetNumIterations ( HYPRE_Solver solver , HYPRE_Int *num_iterations );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2GetFinalRelativeResidualNorm ( HYPRE_Solver solver , HYPRE_Real *norm );
+HYPRE_Int HYPRE_ParCSRCOGMRESv2GetResidual ( HYPRE_Solver solver , HYPRE_ParVector *residual );
+
 
 /* HYPRE_parcsr_hybrid.c */
 HYPRE_Int HYPRE_ParCSRHybridCreate ( HYPRE_Solver *solver );

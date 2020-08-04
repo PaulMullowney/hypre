@@ -1258,6 +1258,9 @@ typedef struct
 //}
 //#endif
 
+struct hypre_CudaSpTriMatrixData;
+typedef struct hypre_CudaSpTriMatrixData hypre_CudaSpTriMatrixData;
+
 #endif
 
 /******************************************************************************

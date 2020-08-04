@@ -969,6 +969,179 @@ extern void hypre_F90_NAME(fhypre_parcsrcogmresgetfinalrela, FHYPRE_PARCSRCOGMRE
 
 
 
+#define HYPRE_ParCSRCOGMRESv2Create  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2create, FHYPRE_PARCSRCOGMRESv2CREATE)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2create, FHYPRE_PARCSRCOGMRESv2CREATE)
+                      (HYPRE_Int *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2Destroy  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2destroy, FHYPRE_PARCSRCOGMRESv2DESTROY)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2destroy, FHYPRE_PARCSRCOGMRESv2DESTROY)
+                      (hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2Setup  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setup, FHYPRE_PARCSRCOGMRESv2SETUP)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setup, FHYPRE_PARCSRCOGMRESv2SETUP)
+                      (hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2Solve  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2solve, FHYPRE_PARCSRCOGMRESv2SOLVE)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2solve, FHYPRE_PARCSRCOGMRESv2SOLVE)
+                      (hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2SetKDim  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setkdim, FHYPRE_PARCSRCOGMRESv2SETKDIM)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setkdim, FHYPRE_PARCSRCOGMRESv2SETKDIM)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetUnroll  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setunroll, FHYPRE_PARCSRCOGMRESv2SETUNROLL)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setunroll, FHYPRE_PARCSRCOGMRESv2SETUNROLL)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetCGS  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setcgs, FHYPRE_PARCSRCOGMRESv2SETCGS)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setcgs, FHYPRE_PARCSRCOGMRESv2SETCGS)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetTol  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2settol, FHYPRE_PARCSRCOGMRESv2SETTOL)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2settol, FHYPRE_PARCSRCOGMRESv2SETTOL)
+                      (hypre_F90_Obj *, HYPRE_Real *);
+
+#define HYPRE_ParCSRCOGMRESv2SetAbsoluteTol  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setabsolutet, FHYPRE_PARCSRCOGMRESv2SETABSOLUTET)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setabsolutet, FHYPRE_PARCSRCOGMRESv2SETABSOLUTET)
+                      (hypre_F90_Obj *, HYPRE_Real *);
+
+#define HYPRE_ParCSRCOGMRESv2SetMinIter  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setminiter, FHYPRE_PARCSRCOGMRESv2SETMINITER)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setminiter, FHYPRE_PARCSRCOGMRESv2SETMINITER)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetMaxIter  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setmaxiter, FHYPRE_PARCSRCOGMRESv2SETMAXITER)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setmaxiter, FHYPRE_PARCSRCOGMRESv2SETMAXITER)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetPrecond  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setprecond, FHYPRE_PARCSRCOGMRESv2SETPRECOND)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setprecond, FHYPRE_PARCSRCOGMRESv2SETPRECOND)
+                      (hypre_F90_Obj *, HYPRE_Int *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2GetPrecond  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2getprecond, FHYPRE_PARCSRCOGMRESv2GETPRECOND)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2getprecond, FHYPRE_PARCSRCOGMRESv2GETPRECOND)
+                      (hypre_F90_Obj *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2SetLogging  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setlogging, FHYPRE_PARCSRCOGMRESv2SETLOGGING)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setlogging, FHYPRE_PARCSRCOGMRESv2SETLOGGING)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetPrintLevel  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setprintlevel, FHYPRE_PARCSRCOGMRESv2SETPRINTLEVEL)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setprintlevel, FHYPRE_PARCSRCOGMRESv2SETPRINTLEVEL)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2GetNumIterations  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2getnumiterat, FHYPRE_PARCSRCOGMRESv2GETNUMITERAT)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2getnumiterat, FHYPRE_PARCSRCOGMRESv2GETNUMITERAT)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2GetFinalRelativeResidualNorm  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2getfinalrela, FHYPRE_PARCSRCOGMRESv2GETFINALRELA)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2getfinalrela, FHYPRE_PARCSRCOGMRESv2GETFINALRELA)
+                      (hypre_F90_Obj *, HYPRE_Real *);
+
+
+  #define HYPRE_ParCSRCOGMRESv2Create  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2create, FHYPRE_PARCSRCOGMRESv2CREATE)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2create, FHYPRE_PARCSRCOGMRESv2CREATE)
+                      (HYPRE_Int *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2Destroy  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2destroy, FHYPRE_PARCSRCOGMRESv2DESTROY)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2destroy, FHYPRE_PARCSRCOGMRESv2DESTROY)
+                      (hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2Setup  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setup, FHYPRE_PARCSRCOGMRESv2SETUP)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setup, FHYPRE_PARCSRCOGMRESv2SETUP)
+                      (hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2Solve  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2solve, FHYPRE_PARCSRCOGMRESv2SOLVE)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2solve, FHYPRE_PARCSRCOGMRESv2SOLVE)
+                      (hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2SetKDim  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setkdim, FHYPRE_PARCSRCOGMRESv2SETKDIM)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setkdim, FHYPRE_PARCSRCOGMRESv2SETKDIM)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetUnroll  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setunroll, FHYPRE_PARCSRCOGMRESv2SETUNROLL)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setunroll, FHYPRE_PARCSRCOGMRESv2SETUNROLL)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetCGS  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setcgs, FHYPRE_PARCSRCOGMRESv2SETCGS)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setcgs, FHYPRE_PARCSRCOGMRESv2SETCGS)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetTol  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2settol, FHYPRE_PARCSRCOGMRESv2SETTOL)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2settol, FHYPRE_PARCSRCOGMRESv2SETTOL)
+                      (hypre_F90_Obj *, HYPRE_Real *);
+
+#define HYPRE_ParCSRCOGMRESv2SetAbsoluteTol  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setabsolutet, FHYPRE_PARCSRCOGMRESv2SETABSOLUTET)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setabsolutet, FHYPRE_PARCSRCOGMRESv2SETABSOLUTET)
+                      (hypre_F90_Obj *, HYPRE_Real *);
+
+#define HYPRE_ParCSRCOGMRESv2SetMinIter  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setminiter, FHYPRE_PARCSRCOGMRESv2SETMINITER)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setminiter, FHYPRE_PARCSRCOGMRESv2SETMINITER)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetMaxIter  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setmaxiter, FHYPRE_PARCSRCOGMRESv2SETMAXITER)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setmaxiter, FHYPRE_PARCSRCOGMRESv2SETMAXITER)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetPrecond  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setprecond, FHYPRE_PARCSRCOGMRESv2SETPRECOND)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setprecond, FHYPRE_PARCSRCOGMRESv2SETPRECOND)
+                      (hypre_F90_Obj *, HYPRE_Int *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2GetPrecond  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2getprecond, FHYPRE_PARCSRCOGMRESv2GETPRECOND)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2getprecond, FHYPRE_PARCSRCOGMRESv2GETPRECOND)
+                      (hypre_F90_Obj *, hypre_F90_Obj *);
+
+#define HYPRE_ParCSRCOGMRESv2SetLogging  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setlogging, FHYPRE_PARCSRCOGMRESv2SETLOGGING)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setlogging, FHYPRE_PARCSRCOGMRESv2SETLOGGING)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2SetPrintLevel  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2setprintlevel, FHYPRE_PARCSRCOGMRESv2SETPRINTLEVEL)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2setprintlevel, FHYPRE_PARCSRCOGMRESv2SETPRINTLEVEL)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2GetNumIterations  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2getnumiterat, FHYPRE_PARCSRCOGMRESv2GETNUMITERAT)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2getnumiterat, FHYPRE_PARCSRCOGMRESv2GETNUMITERAT)
+                      (hypre_F90_Obj *, HYPRE_Int *);
+
+#define HYPRE_ParCSRCOGMRESv2GetFinalRelativeResidualNorm  \
+        hypre_F90_NAME(fhypre_parcsrcogmresv2getfinalrela, FHYPRE_PARCSRCOGMRESv2GETFINALRELA)
+extern void hypre_F90_NAME(fhypre_parcsrcogmresv2getfinalrela, FHYPRE_PARCSRCOGMRESv2GETFINALRELA)
+                      (hypre_F90_Obj *, HYPRE_Real *);
+
+
+
 #define HYPRE_ParCSRHybridCreate \
         hypre_F90_NAME(fhypre_parcsrhybridcreate, FHYPRE_PARCSRHYBRIDCREATE)
 extern void hypre_F90_NAME(fhypre_parcsrhybridcreate, FHYPRE_PARCSRHYBRIDCREATE)

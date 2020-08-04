@@ -338,6 +338,15 @@ hypre_IJMatrixInitializeParCSR_v2(hypre_IJMatrix *matrix, HYPRE_MemoryLocation m
    HYPRE_MemoryLocation memory_location_aux =
       hypre_GetExecPolicy1(memory_location) == HYPRE_EXEC_HOST ? HYPRE_MEMORY_HOST : HYPRE_MEMORY_DEVICE;
 
+#if defined(HYPRE_USING_CUDA)
+   if (hypre_IJMatrixAssembleFlag(matrix) == 1)
+   {
+      hypre_CSRMatrix *diag = hypre_ParCSRMatrixDiag(par_matrix);
+      hypre_CSRMatrixRebuildTriMats(diag) = 1;
+      hypre_CSRMatrixRebuildTriSolves(diag) = 1;
+   }
+#endif
+
    if (hypre_IJMatrixAssembleFlag(matrix) == 0)
    {
       if (!par_matrix)

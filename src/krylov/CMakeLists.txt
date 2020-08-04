@@ -15,6 +15,7 @@ set(SRCS
   bicgstab.c
   cgnr.c
   cogmres.c
+  cogmres_v2.c
   gmres.c
   flexgmres.c
   lgmres.c
@@ -22,6 +23,7 @@ set(SRCS
   HYPRE_cgnr.c
   HYPRE_gmres.c
   HYPRE_cogmres.c
+  HYPRE_cogmres_v2.c
   HYPRE_lgmres.c
   HYPRE_flexgmres.c
   HYPRE_pcg.c

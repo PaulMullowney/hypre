@@ -979,5 +979,44 @@ hypre_SyncCudaDevice(hypre_Handle *hypre_handle)
    return hypre_error_flag;
 }
 
+
+hypre_CudaSpTriMatrixData*
+hypre_CudaSpTriMatrixDataCreate()
+{
+   hypre_CudaSpTriMatrixData *matrix_data = hypre_CTAlloc(hypre_CudaSpTriMatrixData, 1, HYPRE_MEMORY_HOST);
+
+   cusparseMatDescr_t mat_descr;
+   HYPRE_CUSPARSE_CALL( cusparseCreateMatDescr(&mat_descr) );
+   hypre_CudaSpTriMatrixDataMatDescr(matrix_data) = mat_descr;   
+
+   csrsv2Info_t solve_info;
+   HYPRE_CUSPARSE_CALL( cusparseCreateCsrsv2Info(&solve_info) );
+   hypre_CudaSpTriMatrixDataSolveInfo(matrix_data) = solve_info;
+
+   hypre_CudaSpTriMatrixDataWorkBuffer(matrix_data) =NULL;
+   return matrix_data;
+}
+
+void
+hypre_CudaSpTriMatrixDataDestroy(hypre_CudaSpTriMatrixData* matrix_data, HYPRE_MemoryLocation memory_location)
+{
+   if (hypre_CudaSpTriMatrixDataMatDescr(matrix_data) ) {
+      HYPRE_CUSPARSE_CALL( cusparseDestroyMatDescr(hypre_CudaSpTriMatrixDataMatDescr(matrix_data) ) );
+      hypre_CudaSpTriMatrixDataMatDescr(matrix_data) = NULL;
+   }
+
+   if ( hypre_CudaSpTriMatrixDataSolveInfo(matrix_data) ) {
+      HYPRE_CUSPARSE_CALL( cusparseDestroyCsrsv2Info( hypre_CudaSpTriMatrixDataSolveInfo(matrix_data) ) );
+      hypre_CudaSpTriMatrixDataSolveInfo(matrix_data) = NULL;
+   }
+
+   if ( hypre_CudaSpTriMatrixDataWorkBuffer(matrix_data) ) {
+      hypre_TFree(hypre_CudaSpTriMatrixDataWorkBuffer(matrix_data), memory_location);
+      hypre_CudaSpTriMatrixDataWorkBuffer(matrix_data) = NULL;
+   }
+
+   hypre_TFree(matrix_data, HYPRE_MEMORY_HOST);
+}
+
 #endif // #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_DEVICE_OPENMP)
 

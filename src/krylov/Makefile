@@ -9,10 +9,16 @@ CINCLUDES = ${INCLUDES} ${MPIINCLUDE}
  
 C_COMPILE_FLAGS = \
  -I..\
+ -I$(srcdir)\
  -I$(srcdir)/..\
  -I$(srcdir)/../blas\
  -I$(srcdir)/../lapack\
  -I$(srcdir)/../multivector\
+ -I$(srcdir)/../parcsr_ls\
+ -I$(srcdir)/../parcsr_mv\
+ -I$(srcdir)/../parcsr_block_mv\
+ -I$(srcdir)/../IJ_mv\
+ -I$(srcdir)/../seq_mv\
  -I$(srcdir)/../utilities\
  ${CINCLUDES}
 
@@ -23,6 +29,7 @@ HEADERS =\
  cgnr.h\
  gmres.h\
  cogmres.h\
+ cogmres_v2.h\
  flexgmres.h\
  lgmres.h\
  pcg.h\
@@ -35,12 +42,14 @@ FILES =\
  cgnr.c\
  gmres.c\
  cogmres.c\
+ cogmres_v2.c\
  flexgmres.c\
  lgmres.c\
  HYPRE_bicgstab.c\
  HYPRE_cgnr.c\
  HYPRE_gmres.c\
  HYPRE_cogmres.c\
+ HYPRE_cogmres_v2.c\
  HYPRE_lgmres.c\
  HYPRE_flexgmres.c\
  HYPRE_pcg.c\
