@@ -439,6 +439,90 @@ HYPRE_IJVectorSetMaxOffProcElmts( HYPRE_IJVector vector,
 }
 
 /*--------------------------------------------------------------------------
+ * HYPRE_IJVectorSetMaxOnProcElmts
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJVectorSetMaxOnProcElmts( HYPRE_IJVector vector,
+                                 HYPRE_Int      max_on_proc_elmts )
+{
+   hypre_IJVector *vec = (hypre_IJVector *) vector;
+
+   if (!vec)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
+   {
+      return( hypre_IJVectorSetMaxOnProcElmtsPar(vec, max_on_proc_elmts));
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ * HYPRE_IJVectorSetOffProcSendElmts
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJVectorSetOffProcSendElmts( HYPRE_IJVector vector,
+                                   HYPRE_Int      off_proc_send_elmts )
+{
+   hypre_IJVector *vec = (hypre_IJVector *) vector;
+
+   if (!vec)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
+   {
+      return( hypre_IJVectorSetOffProcSendElmtsPar(vec, off_proc_send_elmts));
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ * HYPRE_IJVectorSetOffProcRecvElmts
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJVectorSetOffProcRecvElmts( HYPRE_IJVector vector,
+                                   HYPRE_Int      off_proc_recv_elmts )
+{
+   hypre_IJVector *vec = (hypre_IJVector *) vector;
+
+   if (!vec)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
+   {
+      return( hypre_IJVectorSetOffProcRecvElmtsPar(vec, off_proc_recv_elmts));
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
  * HYPRE_IJVectorSetObjectType
  *--------------------------------------------------------------------------*/
 

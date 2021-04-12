@@ -39,6 +39,10 @@ hypre_AuxParVectorCreate( hypre_AuxParVector **aux_vector)
    hypre_AuxParVectorStackData(vector) = NULL;
    hypre_AuxParVectorStackSorA(vector) = NULL;
    hypre_AuxParVectorUsrOffProcElmts(vector) = -1;
+   hypre_AuxParVectorUsrOnProcElmts(vector) = -1;
+   hypre_AuxParVectorUsrOffProcSendElmts(vector) = -1;
+   hypre_AuxParVectorUsrOffProcRecvElmts(vector) = -1;
+   hypre_AuxParVectorUsrElmtsFilled(vector) = 0;
    hypre_AuxParVectorInitAllocFactor(vector) = 1.5;
    hypre_AuxParVectorGrowFactor(vector) = 2.0;
 #endif
@@ -62,9 +66,15 @@ hypre_AuxParVectorDestroy( hypre_AuxParVector *vector )
       hypre_TFree(hypre_AuxParVectorOffProcData(vector), HYPRE_MEMORY_HOST);
 
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
-      hypre_TFree(hypre_AuxParVectorStackI(vector),    hypre_AuxParVectorMemoryLocation(vector));
-      hypre_TFree(hypre_AuxParVectorStackData(vector), hypre_AuxParVectorMemoryLocation(vector));
-      hypre_TFree(hypre_AuxParVectorStackSorA(vector), hypre_AuxParVectorMemoryLocation(vector));
+      if (hypre_AuxParVectorUsrElmtsFilled(vector)==0) {
+         hypre_TFree(hypre_AuxParVectorStackI(vector),    hypre_AuxParVectorMemoryLocation(vector));
+         hypre_TFree(hypre_AuxParVectorStackData(vector), hypre_AuxParVectorMemoryLocation(vector));
+         hypre_TFree(hypre_AuxParVectorStackSorA(vector), hypre_AuxParVectorMemoryLocation(vector));
+      } else {
+         hypre_AuxParVectorStackI(vector) = NULL;
+         hypre_AuxParVectorStackData(vector) = NULL;
+         hypre_AuxParVectorStackSorA(vector) = NULL;
+      }
 #endif
 
       hypre_TFree(vector, HYPRE_MEMORY_HOST);

@@ -298,6 +298,40 @@ HYPRE_Int HYPRE_IJMatrixSetMaxOffProcElmts(HYPRE_IJMatrix matrix,
                                            HYPRE_Int      max_off_proc_elmts);
 
 /**
+ * (Optional) Sets the maximum number of elements that are expected to be set
+ * (or added) on this processor from this processor
+ * This routine can significantly improve the efficiency of matrix
+ * construction, and should always be utilized if possible.
+ *
+ * Not collective.
+ **/
+HYPRE_Int HYPRE_IJMatrixSetMaxOnProcElmts(HYPRE_IJMatrix matrix,
+                                          HYPRE_Int      max_on_proc_elmts);
+
+/**
+ * (Optional) Sets the exact number of elements that are expected to be set
+ * added on other processors from this processor.
+ * This routine can significantly improve the efficiency of matrix
+ * construction, and should always be utilized if possible.
+ *
+ * Not collective.
+ **/
+HYPRE_Int HYPRE_IJMatrixSetOffProcSendElmts(HYPRE_IJMatrix matrix,
+                                            HYPRE_Int      off_proc_send_elmts);
+
+
+/**
+ * (Optional) Sets the exact number of elements that are expected to be set
+ * added on this processor from other processors
+ * This routine can significantly improve the efficiency of matrix
+ * construction, and should always be utilized if possible.
+ *
+ * Not collective.
+ **/
+HYPRE_Int HYPRE_IJMatrixSetOffProcRecvElmts(HYPRE_IJMatrix matrix,
+                                            HYPRE_Int      off_proc_recv_elmts);
+
+/**
  * (Optional) Sets the print level, if the user wants to print
  * error messages. The default is 0, i.e. no error messages are printed.
  *
@@ -399,13 +433,47 @@ HYPRE_Int HYPRE_IJVectorInitialize_v2( HYPRE_IJVector vector, HYPRE_MemoryLocati
 /**
  * (Optional) Sets the maximum number of elements that are expected to be set
  * (or added) on other processors from this processor
- * This routine can significantly improve the efficiency of matrix
+ * This routine can significantly improve the efficiency of vector
  * construction, and should always be utilized if possible.
  *
  * Not collective.
  **/
 HYPRE_Int HYPRE_IJVectorSetMaxOffProcElmts(HYPRE_IJVector vector,
                                            HYPRE_Int      max_off_proc_elmts);
+
+/**
+ * (Optional) Sets the maximum number of elements that are expected to be set
+ * (or added) on this processor from this processor
+ * This routine can significantly improve the efficiency of vector
+ * construction, and should always be utilized if possible.
+ *
+ * Not collective.
+ **/
+HYPRE_Int HYPRE_IJVectorSetMaxOnProcElmts(HYPRE_IJVector vector,
+                                          HYPRE_Int      max_on_proc_elmts);
+
+/**
+ * (Optional) Sets the exact number of elements that are expected to be set
+ * added on other processors from this processor.
+ * This routine can significantly improve the efficiency of vector
+ * construction, and should always be utilized if possible.
+ *
+ * Not collective.
+ **/
+HYPRE_Int HYPRE_IJVectorSetOffProcSendElmts(HYPRE_IJVector vector,
+                                            HYPRE_Int      off_proc_send_elmts);
+
+
+/**
+ * (Optional) Sets the exact number of elements that are expected to be set
+ * added on this processor from other processors
+ * This routine can significantly improve the efficiency of vector
+ * construction, and should always be utilized if possible.
+ *
+ * Not collective.
+ **/
+HYPRE_Int HYPRE_IJVectorSetOffProcRecvElmts(HYPRE_IJVector vector,
+                                            HYPRE_Int      off_proc_recv_elmts);
 
 /**
  * Sets values in vector.  The arrays \e values and \e indices

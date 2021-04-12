@@ -1038,6 +1038,90 @@ HYPRE_IJMatrixSetMaxOffProcElmts( HYPRE_IJMatrix matrix,
  *--------------------------------------------------------------------------*/
 
 HYPRE_Int
+HYPRE_IJMatrixSetMaxOnProcElmts( HYPRE_IJMatrix matrix,
+				 HYPRE_Int      max_on_proc_elmts)
+{
+   hypre_IJMatrix *ijmatrix = (hypre_IJMatrix *) matrix;
+
+   if (!ijmatrix)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJMatrixObjectType(ijmatrix) == HYPRE_PARCSR )
+   {
+      return( hypre_IJMatrixSetMaxOnProcElmtsParCSR(ijmatrix,
+						    max_on_proc_elmts) );
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJMatrixSetOffProcSendElmts( HYPRE_IJMatrix matrix,
+                                   HYPRE_Int      off_proc_send_elmts)
+{
+   hypre_IJMatrix *ijmatrix = (hypre_IJMatrix *) matrix;
+
+   if (!ijmatrix)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJMatrixObjectType(ijmatrix) == HYPRE_PARCSR )
+   {
+      return( hypre_IJMatrixSetOffProcSendElmtsParCSR(ijmatrix,
+                                                      off_proc_send_elmts) );
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJMatrixSetOffProcRecvElmts( HYPRE_IJMatrix matrix,
+                                   HYPRE_Int      off_proc_recv_elmts)
+{
+   hypre_IJMatrix *ijmatrix = (hypre_IJMatrix *) matrix;
+
+   if (!ijmatrix)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJMatrixObjectType(ijmatrix) == HYPRE_PARCSR )
+   {
+      return( hypre_IJMatrixSetOffProcRecvElmtsParCSR(ijmatrix,
+                                                      off_proc_recv_elmts) );
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
 HYPRE_IJMatrixRead( const char     *filename,
                     MPI_Comm        comm,
                     HYPRE_Int       type,

@@ -59,8 +59,11 @@ hypre_AuxParCSRMatrixCreate( hypre_AuxParCSRMatrix **aux_matrix,
    hypre_AuxParCSRMatrixStackJ(matrix) = NULL;
    hypre_AuxParCSRMatrixStackData(matrix) = NULL;
    hypre_AuxParCSRMatrixStackSorA(matrix) = NULL;
-   hypre_AuxParCSRMatrixUsrOnProcElmts(matrix) = -1;
    hypre_AuxParCSRMatrixUsrOffProcElmts(matrix) = -1;
+   hypre_AuxParCSRMatrixUsrOnProcElmts(matrix) = -1;
+   hypre_AuxParCSRMatrixUsrOffProcSendElmts(matrix) = -1;
+   hypre_AuxParCSRMatrixUsrOffProcRecvElmts(matrix) = -1;
+   hypre_AuxParCSRMatrixUsrElmtsFilled(matrix) = 0;
    hypre_AuxParCSRMatrixInitAllocFactor(matrix) = 5.0;
    hypre_AuxParCSRMatrixGrowFactor(matrix) = 2.0;
 #endif
@@ -143,10 +146,17 @@ hypre_AuxParCSRMatrixDestroy( hypre_AuxParCSRMatrix *matrix )
       hypre_TFree(hypre_AuxParCSRMatrixOffProcData(matrix), HYPRE_MEMORY_HOST);
 
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
-      hypre_TFree(hypre_AuxParCSRMatrixStackI(matrix),    hypre_AuxParCSRMatrixMemoryLocation(matrix));
-      hypre_TFree(hypre_AuxParCSRMatrixStackJ(matrix),    hypre_AuxParCSRMatrixMemoryLocation(matrix));
-      hypre_TFree(hypre_AuxParCSRMatrixStackData(matrix), hypre_AuxParCSRMatrixMemoryLocation(matrix));
-      hypre_TFree(hypre_AuxParCSRMatrixStackSorA(matrix), hypre_AuxParCSRMatrixMemoryLocation(matrix));
+      if (hypre_AuxParCSRMatrixUsrElmtsFilled(matrix)==0) {
+         hypre_TFree(hypre_AuxParCSRMatrixStackI(matrix),    hypre_AuxParCSRMatrixMemoryLocation(matrix));
+         hypre_TFree(hypre_AuxParCSRMatrixStackJ(matrix),    hypre_AuxParCSRMatrixMemoryLocation(matrix));
+         hypre_TFree(hypre_AuxParCSRMatrixStackData(matrix), hypre_AuxParCSRMatrixMemoryLocation(matrix));
+         hypre_TFree(hypre_AuxParCSRMatrixStackSorA(matrix), hypre_AuxParCSRMatrixMemoryLocation(matrix));
+      } else {
+         hypre_AuxParCSRMatrixStackI(matrix)    = NULL;
+	 hypre_AuxParCSRMatrixStackJ(matrix)    = NULL;
+	 hypre_AuxParCSRMatrixStackData(matrix) = NULL;
+	 hypre_AuxParCSRMatrixStackSorA(matrix) = NULL;
+      }
 #endif
 
       hypre_TFree(matrix, HYPRE_MEMORY_HOST);

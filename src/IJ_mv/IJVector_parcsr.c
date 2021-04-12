@@ -147,6 +147,84 @@ hypre_IJVectorSetMaxOffProcElmtsPar(hypre_IJVector *vector,
 
 /******************************************************************************
  *
+ * hypre_IJVectorSetMaxOnProcElmtsPar
+ *
+ *****************************************************************************/
+
+HYPRE_Int
+hypre_IJVectorSetMaxOnProcElmtsPar(hypre_IJVector *vector,
+                                   HYPRE_Int       max_on_proc_elmts)
+{
+   hypre_AuxParVector *aux_vector;
+
+   aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   if (!aux_vector)
+   {
+      hypre_AuxParVectorCreate(&aux_vector);
+      hypre_IJVectorTranslator(vector) = aux_vector;
+   }
+
+#if defined(HYPRE_USING_CUDA)
+   hypre_AuxParVectorUsrOnProcElmts(aux_vector) = max_on_proc_elmts;
+#endif
+
+   return hypre_error_flag;
+}
+
+/******************************************************************************
+ *
+ * hypre_IJVectorSetOffProcSendElmtsPar
+ *
+ *****************************************************************************/
+
+HYPRE_Int
+hypre_IJVectorSetOffProcSendElmtsPar(hypre_IJVector *vector,
+                                     HYPRE_Int       off_proc_send_elmts)
+{
+   hypre_AuxParVector *aux_vector;
+
+   aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   if (!aux_vector)
+   {
+      hypre_AuxParVectorCreate(&aux_vector);
+      hypre_IJVectorTranslator(vector) = aux_vector;
+   }
+
+#if defined(HYPRE_USING_CUDA)
+   hypre_AuxParVectorUsrOffProcSendElmts(aux_vector) = off_proc_send_elmts;
+#endif
+
+   return hypre_error_flag;
+}
+
+/******************************************************************************
+ *
+ * hypre_IJVectorSetOffProcRecvElmtsPar
+ *
+ *****************************************************************************/
+
+HYPRE_Int
+hypre_IJVectorSetOffProcRecvElmtsPar(hypre_IJVector *vector,
+                                     HYPRE_Int       off_proc_recv_elmts)
+{
+   hypre_AuxParVector *aux_vector;
+
+   aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   if (!aux_vector)
+   {
+      hypre_AuxParVectorCreate(&aux_vector);
+      hypre_IJVectorTranslator(vector) = aux_vector;
+   }
+
+#if defined(HYPRE_USING_CUDA)
+   hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector) = off_proc_recv_elmts;
+#endif
+
+   return hypre_error_flag;
+}
+
+/******************************************************************************
+ *
  * hypre_IJVectorDistributePar
  *
  * takes an IJVector generated for one processor and distributes it
