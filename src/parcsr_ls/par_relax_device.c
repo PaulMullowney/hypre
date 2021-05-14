@@ -90,6 +90,7 @@ hypre_BoomerAMGRelaxTwoStageGaussSeidelDevice ( hypre_ParCSRMatrix *A,
    HYPRE_Int        num_rows     = hypre_CSRMatrixNumRows(A_diag);
    HYPRE_Int       *A_diag_i     = hypre_CSRMatrixI(A_diag);
    HYPRE_Complex   *A_diag_data  = hypre_CSRMatrixData(A_diag);
+   HYPRE_Complex   *A_inv_diag   = hypre_CSRMatrixDiag(A_diag);
    hypre_Vector    *u_local      = hypre_ParVectorLocalVector(u);
    hypre_Vector    *r_local      = hypre_ParVectorLocalVector(r);
    hypre_Vector    *z_local      = hypre_ParVectorLocalVector(z);
@@ -103,13 +104,18 @@ hypre_BoomerAMGRelaxTwoStageGaussSeidelDevice ( hypre_ParCSRMatrix *A,
 
    hypre_ParCSRMatrixMatvecOutOfPlace(-relax_weight, A, u, relax_weight, f, r);
 
-   hypreDevice_DiagScaleVector(num_rows, A_diag_i, A_diag_data, r_data, 0.0, z_data);
+   if (!A_inv_diag) {
+     A_inv_diag = hypre_CTAlloc(HYPRE_Complex, num_rows, HYPRE_MEMORY_DEVICE);
+     hypreDevice_GetInvDiag(num_rows, A_diag_i, A_diag_data, A_inv_diag);
+     hypre_CSRMatrixDiag(A_diag) = A_inv_diag;
+   }
+   hypreDevice_FusedDiagScaleVectorAxpy(num_rows, A_inv_diag, r_data, z_data, u_data);
 
    // set this so that axpy works out properly. Reset later.
-   hypre_VectorSize(z_local) = rsize;
+   //hypre_VectorSize(z_local) = rsize;
 
    // 1) u = u + z
-   hypre_SeqVectorAxpy(multiplier, z_local, u_local);
+   //hypre_SeqVectorAxpy(multiplier, z_local, u_local);
    multiplier *= -1.0;
 
    for (i = 0; i < num_inner_iters; ++i) 
@@ -117,12 +123,12 @@ hypre_BoomerAMGRelaxTwoStageGaussSeidelDevice ( hypre_ParCSRMatrix *A,
        // 2) r = Lz
        hypre_CSRMatrixSpMVDevice(1.0, A_diag, z_local, 0.0, r_local, -2);
        // 3) z = r/D, u = u + m*z
-       hypreDevice_DiagScaleVector2(num_rows, A_diag_i, A_diag_data, r_data, multiplier, z_data, u_data);
+       hypreDevice_DiagScaleVector2(num_rows, A_inv_diag, r_data, multiplier, z_data, u_data, num_inner_iters>i+1);
        multiplier *= -1.0;
    }
 
    // reset this
-   hypre_VectorSize(z_local) = zsize;
+   //hypre_VectorSize(z_local) = zsize;
 
    hypre_GpuProfilingPopRange();
 

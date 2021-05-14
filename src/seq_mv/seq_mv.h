@@ -65,6 +65,7 @@ typedef struct
    HYPRE_Int            *rownnz;          /* for compressing rows in matrix multiplication  */
    HYPRE_Int             num_rownnz;
    HYPRE_MemoryLocation  memory_location; /* memory location of arrays i, j, data */
+   HYPRE_Complex        *diag;
 #if defined(HYPRE_USING_CUSPARSE)
    HYPRE_Int            *sorted_j;        /* some cusparse routines require sorted CSR */
    HYPRE_Complex        *sorted_data;
@@ -80,6 +81,7 @@ typedef struct
  * Accessor functions for the CSR Matrix structure
  *--------------------------------------------------------------------------*/
 
+#define hypre_CSRMatrixDiag(matrix)                 ((matrix) -> diag)
 #define hypre_CSRMatrixData(matrix)                 ((matrix) -> data)
 #define hypre_CSRMatrixI(matrix)                    ((matrix) -> i)
 #define hypre_CSRMatrixJ(matrix)                    ((matrix) -> j)

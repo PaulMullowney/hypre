@@ -138,7 +138,14 @@ hypre_csr_v_k_shuffle(HYPRE_Int     n,
       }
       if (grid_group_id < n && group_lane == 0)
       {
-         d_y[grid_group_id] = alpha * sum + beta * d_y[grid_group_id];
+         if (beta != 0.)
+         {
+            d_y[grid_group_id] = alpha * sum + beta * d_y[grid_group_id];
+         }
+         else
+         {
+            d_y[grid_group_id] = alpha * sum;
+         }
       }
    }
 }
