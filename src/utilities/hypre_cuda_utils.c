@@ -578,6 +578,36 @@ hypreDevice_MaskedIVAXPY(HYPRE_Int n, HYPRE_Complex *a, HYPRE_Complex *x, HYPRE_
 }
 
 __global__ void
+hypreCUDAKernel_GetInvDiag(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data, HYPRE_Complex *inv_diag)
+{
+   HYPRE_Int i = hypre_cuda_get_grid_thread_id<1,1>();
+
+   if (i < n)
+   {
+      inv_diag[i] = 1.0 / A_data[A_i[i]];
+   }
+}
+
+/* y = diag(A) \ x + beta y
+ * Note: Assume A_i[i] points to the ith diagonal entry of A */
+HYPRE_Int
+hypreDevice_GetInvDiag(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data, HYPRE_Complex *inv_diag)
+{
+   /* trivial case */
+   if (n <= 0)
+   {
+      return hypre_error_flag;
+   }
+
+   dim3 bDim = hypre_GetDefaultCUDABlockDimension();
+   dim3 gDim = hypre_GetDefaultCUDAGridDimension(n, "thread", bDim);
+
+   HYPRE_CUDA_LAUNCH( hypreCUDAKernel_GetInvDiag, gDim, bDim, n, A_i, A_data, inv_diag );
+
+   return hypre_error_flag;
+}
+
+__global__ void
 hypreCUDAKernel_DiagScaleVector(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data, HYPRE_Complex *x, HYPRE_Complex beta, HYPRE_Complex *y)
 {
    HYPRE_Int i = hypre_cuda_get_grid_thread_id<1,1>();
@@ -615,23 +645,22 @@ hypreDevice_DiagScaleVector(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data, 
 }
 
 __global__ void
-hypreCUDAKernel_DiagScaleVector2(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data, HYPRE_Complex *x, HYPRE_Complex beta, HYPRE_Complex *y, HYPRE_Complex *z)
+hypreCUDAKernel_FusedDiagScaleVectorAxpy(HYPRE_Int n, HYPRE_Complex *A_inv_diag, HYPRE_Complex *x, HYPRE_Complex *y, HYPRE_Complex *z)
 {
    HYPRE_Int i = hypre_cuda_get_grid_thread_id<1,1>();
 
    if (i < n)
    {
-      HYPRE_Complex t = x[i] / A_data[A_i[i]];
+      HYPRE_Complex t = x[i] * A_inv_diag[i];
       y[i] = t;
-      z[i] += beta*t;
+      z[i] += t;
    }
 }
 
-/* y = diag(A) \ x
- * z = beta * (diag(A) \ x) + z
+/* y = diag(A) \ x + beta y
  * Note: Assume A_i[i] points to the ith diagonal entry of A */
 HYPRE_Int
-hypreDevice_DiagScaleVector2(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data, HYPRE_Complex *x, HYPRE_Complex beta, HYPRE_Complex *y, HYPRE_Complex *z)
+hypreDevice_FusedDiagScaleVectorAxpy(HYPRE_Int n, HYPRE_Complex *A_inv_diag, HYPRE_Complex *x, HYPRE_Complex *y, HYPRE_Complex *z)
 {
    /* trivial case */
    if (n <= 0)
@@ -642,7 +671,40 @@ hypreDevice_DiagScaleVector2(HYPRE_Int n, HYPRE_Int *A_i, HYPRE_Complex *A_data,
    dim3 bDim = hypre_GetDefaultCUDABlockDimension();
    dim3 gDim = hypre_GetDefaultCUDAGridDimension(n, "thread", bDim);
 
-   HYPRE_CUDA_LAUNCH( hypreCUDAKernel_DiagScaleVector2, gDim, bDim, n, A_i, A_data, x, beta, y, z );
+   HYPRE_CUDA_LAUNCH( hypreCUDAKernel_FusedDiagScaleVectorAxpy, gDim, bDim, n, A_inv_diag, x, y, z);
+
+   return hypre_error_flag;
+}
+
+__global__ void
+hypreCUDAKernel_DiagScaleVector2(HYPRE_Int n, HYPRE_Complex *A_inv_diag, HYPRE_Complex *x, HYPRE_Complex beta, HYPRE_Complex *y, HYPRE_Complex *z, HYPRE_Int computeY)
+{
+   HYPRE_Int i = hypre_cuda_get_grid_thread_id<1,1>();
+
+   if (i < n)
+   {
+      HYPRE_Complex t = x[i] * A_inv_diag[i];
+      if (computeY) y[i] = t;
+      z[i] += beta*t;
+   }
+}
+
+/* y = diag(A) \ x
+ * z = beta * (diag(A) \ x) + z
+ * Note: Assume A_i[i] points to the ith diagonal entry of A */
+HYPRE_Int
+hypreDevice_DiagScaleVector2(HYPRE_Int n, HYPRE_Complex *A_inv_diag, HYPRE_Complex *x, HYPRE_Complex beta, HYPRE_Complex *y, HYPRE_Complex *z, HYPRE_Int computeY)
+{
+   /* trivial case */
+   if (n <= 0)
+   {
+      return hypre_error_flag;
+   }
+
+   dim3 bDim = hypre_GetDefaultCUDABlockDimension();
+   dim3 gDim = hypre_GetDefaultCUDAGridDimension(n, "thread", bDim);
+
+   HYPRE_CUDA_LAUNCH( hypreCUDAKernel_DiagScaleVector2, gDim, bDim, n, A_inv_diag, x, beta, y, z, computeY );
 
    return hypre_error_flag;
 }
