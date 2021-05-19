@@ -411,6 +411,8 @@ extern "C" {
     HYPRE_Int    (*ClearVector)   ( void *x );
     HYPRE_Int    (*ScaleVector)   ( HYPRE_Complex alpha, void *x );
     HYPRE_Int    (*Axpy)          ( HYPRE_Complex alpha, void *x, void *y );
+    HYPRE_Int    (*MassInnerProd) ( void *x, void **p, HYPRE_Int k, HYPRE_Int unroll, void *result);
+    HYPRE_Int    (*MassAxpy)      ( HYPRE_Complex *alpha, void **x, void *y, HYPRE_Int k, HYPRE_Int unroll);
 
     HYPRE_Int    (*precond)       (void *vdata , void *A , void *b , void *x);
     HYPRE_Int    (*precond_setup) (void *vdata , void *A , void *b , void *x);
@@ -494,6 +496,8 @@ extern "C" {
           HYPRE_Int    (*ClearVector)   ( void *x ),
           HYPRE_Int    (*ScaleVector)   ( HYPRE_Complex alpha, void *x ),
           HYPRE_Int    (*Axpy)          ( HYPRE_Complex alpha, void *x, void *y ),
+          HYPRE_Int    (*MassInnerProd) ( void *x, void **p, HYPRE_Int k, HYPRE_Int unroll, void *result),
+          HYPRE_Int    (*MassAxpy)      ( HYPRE_Complex *alpha, void **x, void *y, HYPRE_Int k, HYPRE_Int unroll),
           HYPRE_Int    (*PrecondSetup)  ( void *vdata, void *A, void *b, void *x ),
           HYPRE_Int    (*Precond)       ( void *vdata, void *A, void *b, void *x )
           );

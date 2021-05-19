@@ -557,6 +557,8 @@ hypre_ILUSetup( void               *ilu_vdata,
                   hypre_ParKrylovClearVector,
                   hypre_ParKrylovScaleVector,
                   hypre_ParKrylovAxpy,
+                  hypre_ParKrylovMassInnerProd,
+                  hypre_ParKrylovMassAxpy,
                   hypre_ParKrylovIdentitySetup, //parCSR A -- inactive
                   hypre_ParKrylovIdentity ); //parCSR A -- inactive
             schur_solver = ( (HYPRE_Solver) hypre_GMRESCreate( gmres_functions ) );
@@ -837,6 +839,8 @@ hypre_ILUSetup( void               *ilu_vdata,
                   hypre_ParKrylovClearVector,
                   hypre_ParKrylovScaleVector,
                   hypre_ParKrylovAxpy,
+                  hypre_ParKrylovMassInnerProd,
+                  hypre_ParKrylovMassAxpy,
                   hypre_ParKrylovIdentitySetup, //parCSR A -- inactive
                   hypre_ParKrylovIdentity ); //parCSR A -- inactive
             schur_solver = ( (HYPRE_Solver) hypre_GMRESCreate( gmres_functions ) );
@@ -962,6 +966,8 @@ hypre_ILUSetup( void               *ilu_vdata,
                      hypre_ParKrylovClearVector,
                      hypre_ParKrylovScaleVector,
                      hypre_ParKrylovAxpy,
+                     hypre_ParKrylovMassInnerProd,
+                     hypre_ParKrylovMassAxpy,
                      hypre_ParKrylovIdentitySetup, //parCSR A -- inactive
                      hypre_ParKrylovIdentity ); //parCSR A -- inactive
             schur_solver = ( (HYPRE_Solver) hypre_GMRESCreate( gmres_functions ) );

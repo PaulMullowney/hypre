@@ -36,6 +36,8 @@ hypre_GMRESFunctionsCreate(
    HYPRE_Int    (*ClearVector)   ( void *x ),
    HYPRE_Int    (*ScaleVector)   ( HYPRE_Complex alpha, void *x ),
    HYPRE_Int    (*Axpy)          ( HYPRE_Complex alpha, void *x, void *y ),
+   HYPRE_Int    (*MassInnerProd) ( void *x, void **p, HYPRE_Int k, HYPRE_Int unroll, void *result),
+   HYPRE_Int    (*MassAxpy)      ( HYPRE_Complex *alpha, void **x, void *y, HYPRE_Int k, HYPRE_Int unroll),
    HYPRE_Int    (*PrecondSetup)  ( void *vdata, void *A, void *b, void *x ),
    HYPRE_Int    (*Precond)       ( void *vdata, void *A, void *b, void *x )
    )
@@ -58,6 +60,8 @@ hypre_GMRESFunctionsCreate(
    gmres_functions->ClearVector = ClearVector;
    gmres_functions->ScaleVector = ScaleVector;
    gmres_functions->Axpy = Axpy;
+   gmres_functions->MassInnerProd = MassInnerProd;
+   gmres_functions->MassAxpy = MassAxpy;
 /* default preconditioner must be set here but can be changed later... */
    gmres_functions->precond_setup = PrecondSetup;
    gmres_functions->precond       = Precond;
@@ -329,6 +333,7 @@ hypre_GMRESSolve(void  *gmres_vdata,
    {
       rs_2 = hypre_CTAllocF(HYPRE_Real,k_dim+1,gmres_functions, HYPRE_MEMORY_HOST);
    }
+   HYPRE_Real * HH = hypre_CTAllocF(HYPRE_Real,k_dim+1,gmres_functions, HYPRE_MEMORY_HOST);
    hh = hypre_CTAllocF(HYPRE_Real*,k_dim+1,gmres_functions, HYPRE_MEMORY_HOST);
    for (i=0; i < k_dim+1; i++)
    {
@@ -517,12 +522,22 @@ hypre_GMRESSolve(void  *gmres_vdata,
          precond(precond_data, A, p[i-1], r);
          (*(gmres_functions->Matvec))(matvec_data, 1.0, A, r, 0.0, p[i]);
          /* modified Gram_Schmidt */
-         for (j=0; j < i; j++)
-         {
-            hh[j][i-1] = (*(gmres_functions->InnerProd))(p[j],p[i]);
-            (*(gmres_functions->Axpy))(-hh[j][i-1],p[j],p[i]);
-         }
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+	 hypre_GpuProfilingPushRange("GMRES-GramSchmidt");
+#endif
+
+	 (*(gmres_functions->MassInnerProd))((void *) p[i], p, i, 1, HH);
+	 for (j=0; j<i; j++) {
+             hh[j][i-1] = HH[j];
+	     HH[j] *= -1.0;
+	 }
+         (*(gmres_functions->MassAxpy))(HH, p, p[i], i, 1);
          t = sqrt((*(gmres_functions->InnerProd))(p[i],p[i]));
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+	 hypre_GpuProfilingPopRange();
+#endif
+
          hh[i][i-1] = t;
          if (t != 0.0)
          {
@@ -891,6 +906,7 @@ hypre_GMRESSolve(void  *gmres_vdata,
    }
 
    hypre_TFreeF(hh, gmres_functions);
+   hypre_TFreeF(HH, gmres_functions);
 
    HYPRE_ANNOTATE_FUNC_END;
 
