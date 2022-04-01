@@ -237,6 +237,16 @@ hypre_CSRMatrixMatvecCusparseNewAPI( HYPRE_Int        trans,
       matY = hypre_VectorToCusparseDnMat(y);
    }
 
+   if (beta==0.0) {
+       HYPRE_Int ysize=0;
+       if (num_rows - offset  >= 0)
+           ysize = num_rows - offset;
+       else
+           ysize = hypre_VectorSize(y) - offset;
+       hypre_Memset(hypre_VectorData(y)+offset, 0, ysize*sizeof(HYPRE_Complex), HYPRE_MEMORY_DEVICE);
+       beta=1.0;
+   }
+
    if (!dBuffer)
    {
       if (num_vectors == 1)
