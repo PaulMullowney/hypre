@@ -443,7 +443,7 @@ hypre_ParVectorInnerProd( hypre_ParVector *x,
    hypre_profile_times[HYPRE_TIMER_ID_ALL_REDUCE] -= hypre_MPI_Wtime();
 #endif
 
-   hypre_MPI_Allreduce(&dlocal_result, &dresult, 1, HYPRE_MPI_REAL,
+   hypre_MPI_Allreduce(dlocal_result, dresult, 1, HYPRE_MPI_REAL,
                        hypre_MPI_SUM, comm);
 
    hypre_TMemcpy(&result, dresult, HYPRE_Real, 1, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);

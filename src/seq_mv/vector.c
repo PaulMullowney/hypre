@@ -847,13 +847,11 @@ hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
 
 #if defined(HYPRE_USING_ROCBLAS)
-   hypre_printf("rocblas : %s %s %d\n",__FILE__,__FUNCTION__,__LINE__);
    HYPRE_ROCBLAS_CALL( hypre_rocblas_dot(hypre_HandleRocblasHandle(hypre_handle()), size, x_data, 1,
 										 y_data, 1, result) );
 #else
-   hypre_printf("thrust : %s %s %d\n",__FILE__,__FUNCTION__,__LINE__);
    HYPRE_Real hresult = HYPRE_THRUST_CALL( inner_product, x_data, x_data + size, y_data, 0.0 );
-   hypre_TMemcpy(result, hresult, HYPRE_Real, 1, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+   hypre_TMemcpy(result, &hresult, HYPRE_Real, 1, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
 #endif // #if defined(HYPRE_USING_ROCBLAS)
 
 #endif // #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
