@@ -325,6 +325,6 @@ hypre_GpuMatData* hypre_CSRMatrixGetGPUMatData(hypre_CSRMatrix *matrix);
 #endif
 void hypre_CSRMatrixGpuSpMVAnalysis(hypre_CSRMatrix *matrix);
 
-#ifndef HYPRE_WITH_GPU_AWARE_MPI
-HYPRE_Int hypre_SeqVectorInnerProd ( hypre_Vector *x, hypre_Vector *y, hypre_Real * result );
+#ifdef HYPRE_WITH_GPU_AWARE_MPI
+HYPRE_Int hypre_SeqVectorInnerProdDevice ( hypre_Vector *x, hypre_Vector *y, HYPRE_Real * result );
 #endif

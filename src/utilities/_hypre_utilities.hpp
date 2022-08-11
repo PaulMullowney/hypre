@@ -412,8 +412,8 @@ using hypre_DeviceItem = sycl::nd_item<1>;
    } } while(0)
 
 #define HYPRE_ROCBLAS_CALL(call) do {                                                        \
-   rocsparse_status err = call;                                                              \
-   if (rocsparse_status_success != err) {                                                    \
+   rocblas_status err = call;                                                                \
+   if (rocblas_status_success != err) {                                                      \
       printf("rocBLAS ERROR (code = %d) at %s:%d\n",                                         \
             err, __FILE__, __LINE__);                                                        \
       hypre_assert(0); exit(1);                                                              \
@@ -619,6 +619,10 @@ cublasHandle_t      hypre_DeviceDataCublasHandle(hypre_DeviceData *data);
 
 #if defined(HYPRE_USING_CUSPARSE)
 cusparseHandle_t    hypre_DeviceDataCusparseHandle(hypre_DeviceData *data);
+#endif
+
+#if defined(HYPRE_USING_ROCBLAS)
+rocblas_handle      hypre_DeviceDataRocblasHandle(hypre_DeviceData *data);
 #endif
 
 #if defined(HYPRE_USING_ROCSPARSE)

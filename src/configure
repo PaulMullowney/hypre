@@ -9298,6 +9298,8 @@ fi
 
 $as_echo "#define HYPRE_USING_ROCBLAS 1" >>confdefs.h
 
+               HYPRE_HIP_LIBS="${HYPRE_HIP_LIBS} -lrocblas"
+
 
 fi
 

@@ -2384,6 +2384,7 @@ AS_IF([test x"$hypre_using_hip" == x"yes"],
         dnl So we don't need to add any extra libs or anything.
         AS_IF([test x"$hypre_using_rocblas" == x"yes"],
               [AC_DEFINE(HYPRE_USING_ROCBLAS, 1, [rocBLAS being used])
+               HYPRE_HIP_LIBS="${HYPRE_HIP_LIBS} -lrocblas"
               ])
 
         dnl rocRAND: random number generation on AMD GPUs
