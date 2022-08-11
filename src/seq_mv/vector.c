@@ -825,6 +825,53 @@ hypre_SeqVectorElmdivpyMarked( hypre_Vector *x,
 /*--------------------------------------------------------------------------
  * hypre_SeqVectorInnerProd
  *--------------------------------------------------------------------------*/
+#ifndef HYPRE_WITH_GPU_AWARE_MPI
+
+HYPRE_Int
+hypre_SeqVectorInnerProd( hypre_Vector *x,
+                          hypre_Vector *y,
+	                      hypre_Real * result)
+#ifdef HYPRE_PROFILE
+   hypre_profile_times[HYPRE_TIMER_ID_BLAS1] -= hypre_MPI_Wtime();
+#endif
+
+   HYPRE_Complex *x_data = hypre_VectorData(x);
+   HYPRE_Complex *y_data = hypre_VectorData(y);
+   HYPRE_Int      size   = hypre_VectorSize(x);
+
+   size *= hypre_VectorNumVectors(x);
+
+#ifndef HYPRE_COMPLEX
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+
+#if defined(HYPRE_USING_ROCBLAS)
+	HYPRE_ROCBLAS_CALL( hypre_rocblas_dot(hypre_HandleCublasHandle(hypre_handle()), size, x_data, 1,
+										  y_data, 1, result) );
+#else
+#endif // #if defined(HYPRE_USING_ROCBLAS)
+	// TODO Need rocblas call
+#endif // #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   hypre_Real hresult = HYPRE_THRUST_CALL( inner_product, x_data, x_data + size, y_data, 0.0 );
+   hypre_TMemcpy(result, hresult, HYPRE_Real, 1, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+   // TODO Need kernel
+#else // #ifndef HYPRE_COMPLEX
+#error "Complex inner product"
+#endif // #ifndef HYPRE_COMPLEX
+
+#if defined(HYPRE_USING_GPU)
+   hypre_SyncComputeStream(hypre_handle());
+#endif
+
+#ifdef HYPRE_PROFILE
+   hypre_profile_times[HYPRE_TIMER_ID_BLAS1] += hypre_MPI_Wtime();
+#endif
+
+   return hypre_error_flag;
+}
+
+#else
+
 HYPRE_Real
 hypre_SeqVectorInnerProd( hypre_Vector *x,
                           hypre_Vector *y )
@@ -902,6 +949,8 @@ hypre_SeqVectorInnerProd( hypre_Vector *x,
 
    return result;
 }
+
+#endif
 
 //TODO
 

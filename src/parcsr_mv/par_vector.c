@@ -423,6 +423,41 @@ hypre_ParVectorAxpy( HYPRE_Complex    alpha,
  * hypre_ParVectorInnerProd
  *--------------------------------------------------------------------------*/
 
+#ifndef HYPRE_WITH_GPU_AWARE_MPI
+
+HYPRE_Real
+hypre_ParVectorInnerProd( hypre_ParVector *x,
+                          hypre_ParVector *y )
+{
+   MPI_Comm      comm    = hypre_ParVectorComm(x);
+   hypre_Vector *x_local = hypre_ParVectorLocalVector(x);
+   hypre_Vector *y_local = hypre_ParVectorLocalVector(y);
+
+   HYPRE_Real * dlocal_result = hypre_CTAlloc(HYPRE_Real, 1, HYPRE_MEMORY_DEVICE);
+   HYPRE_Real * dresult = hypre_CTAlloc(HYPRE_Real, 1, HYPRE_MEMORY_DEVICE);
+
+   HYPRE_Real result = 0.0;
+   hypre_SeqVectorInnerProd(x_local, y_local, dlocal_result);
+
+#ifdef HYPRE_PROFILE
+   hypre_profile_times[HYPRE_TIMER_ID_ALL_REDUCE] -= hypre_MPI_Wtime();
+#endif
+
+   hypre_MPI_Allreduce(&dlocal_result, &dresult, 1, HYPRE_MPI_REAL,
+                       hypre_MPI_SUM, comm);
+
+   hypre_TMemcpy(result, dresult, HYPRE_Real, 1, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+
+#ifdef HYPRE_PROFILE
+   hypre_profile_times[HYPRE_TIMER_ID_ALL_REDUCE] += hypre_MPI_Wtime();
+#endif
+
+   return result;
+}
+
+
+#else
+
 HYPRE_Real
 hypre_ParVectorInnerProd( hypre_ParVector *x,
                           hypre_ParVector *y )
@@ -445,6 +480,8 @@ hypre_ParVectorInnerProd( hypre_ParVector *x,
 
    return result;
 }
+
+#endif
 
 /*--------------------------------------------------------------------------
  * hypre_ParVectorElmdivpy

@@ -112,12 +112,18 @@ hypre_DeviceDataDestroy(hypre_DeviceData *data)
    }
 #endif
 
-#if defined(HYPRE_USING_CUBLAS)
+
+#if defined(HYPRE_USING_CUBLAS) || defined(HYPRE_USING_ROCBLAS)
    if (data->cublas_handle)
    {
+#if defined(HYPRE_USING_CUBLAS)
       HYPRE_CUBLAS_CALL( cublasDestroy(data->cublas_handle) );
-   }
+#elif defined(HYPRE_USING_ROCBLAS)
+      HYPRE_ROCBLAS_CALL( rocblas_destroy_handle(data->cublas_handle) );
 #endif
+   }
+#endif // #if defined(HYPRE_USING_CUBLAS) || defined(HYPRE_USING_ROCBLAS)
+
 
 #if defined(HYPRE_USING_CUSPARSE) || defined(HYPRE_USING_ROCSPARSE)
    if (data->cusparse_handle)
@@ -2366,6 +2372,33 @@ hypre_DeviceDataCublasHandle(hypre_DeviceData *data)
    return handle;
 }
 #endif
+
+
+#if defined(HYPRE_USING_ROCBLAS)
+
+/*--------------------------------------------------------------------
+ * hypre_DeviceDataRocblasHandle
+ *--------------------------------------------------------------------*/
+
+rocblas_handle
+hypre_DeviceDataRocblasHandle(hypre_DeviceData *data)
+{
+   if (data->cublas_handle)
+   {
+      return data->cublas_handle;
+   }
+
+   rocblas_handle handle;
+   HYPRE_ROCBLAS_CALL( rocblas_create_handle(&handle) );
+
+   HYPRE_ROCBLAS_CALL( rocblas_set_stream(handle, hypre_DeviceDataComputeStream(data)) );
+
+   data->cublas_handle = handle;
+
+   return handle;
+}
+#endif
+
 
 #if defined(HYPRE_USING_CUSPARSE)
 

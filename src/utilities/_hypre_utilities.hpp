@@ -118,6 +118,10 @@ using hypre_DeviceItem = void*;
 #include <rocsparse.h>
 #endif
 
+#if defined(HYPRE_USING_ROCBLAS)
+#include <rocblas.h>
+#endif
+
 #if defined(HYPRE_USING_ROCRAND)
 #include <rocrand/rocrand.h>
 #endif
@@ -362,6 +366,7 @@ using hypre_DeviceItem = sycl::nd_item<1>;
 #define hypre_rocsparse_csrgemm_buffer_size    rocsparse_scsrgemm_buffer_size
 #define hypre_rocsparse_csrgemm                rocsparse_scsrgemm
 #define hypre_rocsparse_csr2csc                rocsparse_scsr2csc
+#define hypre_rocblas_dot                      rocblas_sdot
 #elif defined(HYPRE_LONG_DOUBLE) /* Long Double */
 /* ... */
 #else /* Double */
@@ -394,6 +399,7 @@ using hypre_DeviceItem = sycl::nd_item<1>;
 #define hypre_rocsparse_csrgemm_buffer_size    rocsparse_dcsrgemm_buffer_size
 #define hypre_rocsparse_csrgemm                rocsparse_dcsrgemm
 #define hypre_rocsparse_csr2csc                rocsparse_dcsr2csc
+#define hypre_rocblas_dot                      rocblas_ddot
 #endif
 
 
@@ -402,6 +408,14 @@ using hypre_DeviceItem = sycl::nd_item<1>;
    if (CUBLAS_STATUS_SUCCESS != err) {                                                       \
       printf("CUBLAS ERROR (code = %d, %d) at %s:%d\n",                                      \
             err, err == CUBLAS_STATUS_EXECUTION_FAILED, __FILE__, __LINE__);                 \
+      hypre_assert(0); exit(1);                                                              \
+   } } while(0)
+
+#define HYPRE_ROCBLAS_CALL(call) do {                                                        \
+   rocsparse_status err = call;                                                              \
+   if (rocsparse_status_success != err) {                                                    \
+      printf("rocBLAS ERROR (code = %d) at %s:%d\n",                                         \
+            err, __FILE__, __LINE__);                                                        \
       hypre_assert(0); exit(1);                                                              \
    } } while(0)
 
@@ -489,6 +503,10 @@ struct hypre_DeviceData
 
 #if defined(HYPRE_USING_CUSPARSE)
    cusparseHandle_t                  cusparse_handle;
+#endif
+
+#if defined(HYPRE_USING_ROCBLAS)
+   rocblas_handle                    cublas_handle;
 #endif
 
 #if defined(HYPRE_USING_ROCSPARSE)
