@@ -448,6 +448,9 @@ hypre_ParVectorInnerProd( hypre_ParVector *x,
 
    hypre_TMemcpy(&result, dresult, HYPRE_Real, 1, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
 
+   hypre_TFree(dresult, HYPRE_MEMORY_DEVICE);
+   hypre_TFree(dlocal_result, HYPRE_MEMORY_DEVICE);
+
 #ifdef HYPRE_PROFILE
    hypre_profile_times[HYPRE_TIMER_ID_ALL_REDUCE] += hypre_MPI_Wtime();
 #endif

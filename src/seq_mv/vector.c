@@ -827,6 +827,123 @@ hypre_SeqVectorElmdivpyMarked( hypre_Vector *x,
  *--------------------------------------------------------------------------*/
 #ifdef HYPRE_WITH_GPU_AWARE_MPI
 
+
+template<HYPRE_Int SIZE>
+__global__ void	hypreGPUKernel_InnerProd_kernel1(const HYPRE_Int n,
+												 const HYPRE_Complex * __restrict__ x,
+												 const HYPRE_Complex * __restrict__ y,
+												 HYPRE_Complex * __restrict__ z)
+{
+   volatile __shared__ HYPRE_Complex shmem[SIZE];
+   HYPRE_Int tidx = threadIdx.x+blockDim.x*blockIdx.x;
+   HYPRE_Complex sum = 0.0;
+   shmem[threadIdx.x] = 0.0;
+   __syncthreads();
+
+   for (int i=tidx; i<n; i+=blockDim.x*gridDim.x)
+   {
+	   shmem[threadIdx.x] += x[tidx]*y[tidx];
+   }
+   __syncthreads();
+
+   HYPRE_Int size;
+#pragma unroll
+   for (size=SIZE>>1; size>=warpSize<<1; size>>=1)
+   {
+	   if (hipThreadIdx_x < size)
+	   {
+		   shmem[tid] += shmem[tid + size];
+	   }
+	   __syncthreads();
+   }
+
+#pragma unroll
+  for (int i = warpSize>>1; i > 0; i >>= 1)
+	  sum += __shfl_down(sum, i, warpSize);
+
+  if (threadIdx.x==0)
+	  z[blockIdx.x] = sum;
+}
+
+
+template<HYPRE_Int SIZE>
+__global__ void	hypreGPUKernel_InnerProd_kernel2(const HYPRE_Int n,
+												 const HYPRE_Complex * __restrict__ x,
+												 HYPRE_Complex * __restrict__ y)
+{
+   volatile __shared__ HYPRE_Complex shmem[SIZE];
+   HYPRE_Int tidx = threadIdx.x+blockDim.x*blockIdx.x;
+   HYPRE_Complex sum = 0.0;
+   shmem[threadIdx.x] = 0.0;
+   __syncthreads();
+
+   for (int i=tidx; i<n; i+=blockDim.x*gridDim.x)
+   {
+	   shmem[threadIdx.x] += x[tidx];
+   }
+   __syncthreads();
+
+   HYPRE_Int size;
+#pragma unroll
+   for (size=SIZE>>1; size>=warpSize<<1; size>>=1)
+   {
+	   if (hipThreadIdx_x < size)
+	   {
+		   shmem[tid] += shmem[tid + size];
+	   }
+	   __syncthreads();
+   }
+
+#pragma unroll
+  for (int i = warpSize>>1; i > 0; i >>= 1)
+	  sum += __shfl_down(sum, i, warpSize);
+
+  if (threadIdx.x==0)
+	  y[blockIdx.x] = sum;
+}
+
+
+
+HYPRE_Int
+hypreDevice_InnerProd(HYPRE_Int n, HYPRE_Complex *x, HYPRE_Complex *y, HYPRE_Complex *result)
+{
+   /* trivial case */
+   if (n <= 0)
+   {
+      return hypre_error_flag;
+   }
+
+   HYPRE_Int warpSize, dev, numSMs;
+#if defined(HYPRE_USING_CUDA)
+   struct cudaDeviceProp deviceProp;
+   HYPRE_CUDA_CALL( cudaGetDevice(&dev) );
+   HYPRE_CUDA_CALL( cudaGetDeviceProperties(&deviceProp, dev) );
+#endif
+
+#if defined(HYPRE_USING_HIP)
+   hipDeviceProp_t deviceProp;
+   HYPRE_HIP_CALL( hipGetDevice(&dev) );
+   HYPRE_HIP_CALL( hipGetDeviceProperties(&deviceProp, dev) );
+#endif
+
+   // Get the warpSize
+   warpSize = deviceProp.warpSize;
+   numSMs = deviceProp.multiProcessorCount;
+   const HYPRE_Int N1 = 256;
+   HYPRE_Int num_blocks = 32*numSMs;
+
+   HYPRE_Real * d_result = hypre_CTAlloc(HYPRE_Real, num_blocks, HYPRE_MEMORY_DEVICE);
+   hypreGPUKernel_InnerProd_kernel1<N1><<<num_blocks,N1>>>(n, x, y, d_result);
+
+   num_blocks=1;
+   hypreGPUKernel_InnerProd_kernel2<N1><<<num_blocks,N1>>>(num_blocks, d_result, result);
+
+   hypre_TFree(d_result, HYPRE_MEMORY_DEVICE);
+
+   return hypre_error_flag;
+}
+
+
 HYPRE_Int
 hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
 								hypre_Vector *y,
@@ -847,11 +964,14 @@ hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
 
 #if defined(HYPRE_USING_ROCBLAS)
+   HYPRE_ROCBLAS_CALL( rocblas_set_pointer_mode( hypre_HandleRocblasHandle(hypre_handle()),
+												 rocblas_pointer_mode_device) );
    HYPRE_ROCBLAS_CALL( hypre_rocblas_dot(hypre_HandleRocblasHandle(hypre_handle()), size, x_data, 1,
 										 y_data, 1, result) );
 #else
-   HYPRE_Real hresult = HYPRE_THRUST_CALL( inner_product, x_data, x_data + size, y_data, 0.0 );
-   hypre_TMemcpy(result, &hresult, HYPRE_Real, 1, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
+   hypreDevice_InnerProd(size, x_data, y_data, result);
+   //HYPRE_Real hresult = HYPRE_THRUST_CALL( inner_product, x_data, x_data + size, y_data, 0.0 );
+   //hypre_TMemcpy(result, &hresult, HYPRE_Real, 1, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
 #endif // #if defined(HYPRE_USING_ROCBLAS)
 
 #endif // #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)

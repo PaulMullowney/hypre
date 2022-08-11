@@ -2390,7 +2390,7 @@ hypre_DeviceDataRocblasHandle(hypre_DeviceData *data)
 
    rocblas_handle handle;
    HYPRE_ROCBLAS_CALL( rocblas_create_handle(&handle) );
-
+   rocblas_initialize();
    HYPRE_ROCBLAS_CALL( rocblas_set_stream(handle, hypre_DeviceDataComputeStream(data)) );
 
    data->cublas_handle = handle;
