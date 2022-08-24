@@ -98,6 +98,19 @@ hypre_DeviceDataDestroy(hypre_DeviceData *data)
    hypre_TFree(hypre_DeviceDataStructCommRecvBuffer(data), HYPRE_MEMORY_DEVICE);
    hypre_TFree(hypre_DeviceDataStructCommSendBuffer(data), HYPRE_MEMORY_DEVICE);
 
+#if defined(HYPRE_USING_HIP)
+   if (hypre_DeviceDataPinnedWork(data))
+	   hipFreeHost(hypre_DeviceDataPinnedWork(data));
+#endif
+
+#if defined(HYPRE_USING_HIP)
+   if (hypre_DeviceDataDeviceWork(data))
+   {
+	   hypre_TFree(hypre_DeviceDataDeviceWork(data), HYPRE_MEMORY_DEVICE);
+	   hypre_DeviceDataDeviceWork(data) = NULL;
+   }
+#endif
+
 #if defined(HYPRE_USING_CURAND)
    if (data->curand_generator)
    {

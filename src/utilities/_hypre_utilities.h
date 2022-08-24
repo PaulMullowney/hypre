@@ -796,6 +796,7 @@ void   hypre_MemPrefetch(void *ptr, size_t size, HYPRE_MemoryLocation location);
 void * hypre_MAlloc(size_t size, HYPRE_MemoryLocation location);
 void * hypre_CAlloc( size_t count, size_t elt_size, HYPRE_MemoryLocation location);
 void   hypre_Free(void *ptr, HYPRE_MemoryLocation location);
+void * hypre_HostGetDevicePointer(void *hostPtr);
 void   hypre_Memcpy(void *dst, void *src, size_t size, HYPRE_MemoryLocation loc_dst,
                     HYPRE_MemoryLocation loc_src);
 void * hypre_ReAlloc(void *ptr, size_t size, HYPRE_MemoryLocation location);
@@ -1378,6 +1379,8 @@ typedef struct
 #define hypre_HandleSpgemmRownnzEstimateMultFactor(hypre_handle) hypre_DeviceDataSpgemmRownnzEstimateMultFactor(hypre_HandleDeviceData(hypre_handle))
 #define hypre_HandleDeviceAllocator(hypre_handle)                hypre_DeviceDataDeviceAllocator(hypre_HandleDeviceData(hypre_handle))
 #define hypre_HandleUseGpuRand(hypre_handle)                     hypre_DeviceDataUseGpuRand(hypre_HandleDeviceData(hypre_handle))
+#define hypre_HandlePinnedWork(hypre_handle)                     hypre_DeviceDataPinnedWork(hypre_HandleDeviceData(hypre_handle))
+#define hypre_HandleDeviceWork(hypre_handle)                     hypre_DeviceDataDeviceWork(hypre_HandleDeviceData(hypre_handle))
 
 #define hypre_HandleUserDeviceMalloc(hypre_handle)               ((hypre_handle) -> user_device_malloc)
 #define hypre_HandleUserDeviceMfree(hypre_handle)                ((hypre_handle) -> user_device_free)

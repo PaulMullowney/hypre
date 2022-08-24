@@ -282,6 +282,7 @@ void   hypre_MemPrefetch(void *ptr, size_t size, HYPRE_MemoryLocation location);
 void * hypre_MAlloc(size_t size, HYPRE_MemoryLocation location);
 void * hypre_CAlloc( size_t count, size_t elt_size, HYPRE_MemoryLocation location);
 void   hypre_Free(void *ptr, HYPRE_MemoryLocation location);
+void * hypre_HostGetDevicePointer(void *hostPtr);
 void   hypre_Memcpy(void *dst, void *src, size_t size, HYPRE_MemoryLocation loc_dst,
                     HYPRE_MemoryLocation loc_src);
 void * hypre_ReAlloc(void *ptr, size_t size, HYPRE_MemoryLocation location);

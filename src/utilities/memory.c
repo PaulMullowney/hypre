@@ -324,6 +324,35 @@ hypre_UnifiedMalloc(size_t size, HYPRE_Int zeroinit)
    return ptr;
 }
 
+/*--------------------------------------------------------------------------
+ * hypre_HostGetDevicePointer
+ *--------------------------------------------------------------------------*/
+
+static inline void *
+hypre_HostGetDevicePointer_core(void * hostPtr)
+{
+    void * devPtr = NULL;
+#if defined(HYPRE_USING_CUDA)
+    HYPRE_CUDA_CALL( cudaHostGetDevicePointer(&devPtr, hostPtr, 0) );
+#endif
+#if defined(HYPRE_USING_HIP)
+    HYPRE_HIP_CALL( hipHostGetDevicePointer(&devPtr, hostPtr, hipHostRegisterMapped) );
+#endif
+    return devPtr;
+}
+
+void *
+hypre_HostGetDevicePointer(void *hostPtr)
+{
+   return hypre_HostGetDevicePointer_core(hostPtr);
+}
+
+
+/*--------------------------------------------------------------------------
+ * hypre_HostPinnedMalloc
+ *--------------------------------------------------------------------------*/
+
+
 static inline void *
 hypre_HostPinnedMalloc(size_t size, HYPRE_Int zeroinit)
 {

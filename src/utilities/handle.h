@@ -93,6 +93,8 @@ typedef struct
 #define hypre_HandleSpgemmRownnzEstimateMultFactor(hypre_handle) hypre_DeviceDataSpgemmRownnzEstimateMultFactor(hypre_HandleDeviceData(hypre_handle))
 #define hypre_HandleDeviceAllocator(hypre_handle)                hypre_DeviceDataDeviceAllocator(hypre_HandleDeviceData(hypre_handle))
 #define hypre_HandleUseGpuRand(hypre_handle)                     hypre_DeviceDataUseGpuRand(hypre_HandleDeviceData(hypre_handle))
+#define hypre_HandlePinnedWork(hypre_handle)                     hypre_DeviceDataPinnedWork(hypre_HandleDeviceData(hypre_handle))
+#define hypre_HandleDeviceWork(hypre_handle)                     hypre_DeviceDataDeviceWork(hypre_HandleDeviceData(hypre_handle))
 
 #define hypre_HandleUserDeviceMalloc(hypre_handle)               ((hypre_handle) -> user_device_malloc)
 #define hypre_HandleUserDeviceMfree(hypre_handle)                ((hypre_handle) -> user_device_free)
@@ -111,5 +113,6 @@ typedef struct
 #define hypre_HandleOwnUmpireUMPool(hypre_handle)                ((hypre_handle) -> own_umpire_um_pool)
 #define hypre_HandleOwnUmpireHostPool(hypre_handle)              ((hypre_handle) -> own_umpire_host_pool)
 #define hypre_HandleOwnUmpirePinnedPool(hypre_handle)            ((hypre_handle) -> own_umpire_pinned_pool)
+
 
 #endif

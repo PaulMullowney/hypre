@@ -571,6 +571,9 @@ struct hypre_DeviceData
    HYPRE_Int                         spgemm_use_vendor;
    /* PMIS RNG */
    HYPRE_Int                         use_gpu_rand;
+   /* pinned buffers for reduction algorithms */
+   HYPRE_Complex*                    pwork;
+   HYPRE_Complex*                    dwork;
 };
 
 #define hypre_DeviceDataCubBinGrowth(data)                   ((data) -> cub_bin_growth)
@@ -601,6 +604,8 @@ struct hypre_DeviceData
 #define hypre_DeviceDataSpgemmRownnzEstimateMultFactor(data) ((data) -> spgemm_rownnz_estimate_mult_factor)
 #define hypre_DeviceDataDeviceAllocator(data)                ((data) -> device_allocator)
 #define hypre_DeviceDataUseGpuRand(data)                     ((data) -> use_gpu_rand)
+#define hypre_DeviceDataPinnedWork(data)                     ((data) -> pwork)
+#define hypre_DeviceDataDeviceWork(data)                     ((data) -> dwork)
 
 hypre_DeviceData*     hypre_DeviceDataCreate();
 void                hypre_DeviceDataDestroy(hypre_DeviceData* data);

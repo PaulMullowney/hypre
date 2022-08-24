@@ -527,6 +527,8 @@ HYPRE_Int hypre_SeqVectorMassInnerProd4(hypre_Vector *x, hypre_Vector **y, HYPRE
                                         HYPRE_Real *result);
 HYPRE_Int hypre_SeqVectorMassInnerProd8(hypre_Vector *x, hypre_Vector **y, HYPRE_Int k,
                                         HYPRE_Real *result);
+HYPRE_Real hypre_SeqVectorInnerProdPinned ( hypre_Vector *x, hypre_Vector *y );
+HYPRE_Int hypre_SeqVectorInnerProdDevice ( hypre_Vector *x, hypre_Vector *y, HYPRE_Real * result );
 HYPRE_Int hypre_SeqVectorMassDotpTwo(hypre_Vector *x, hypre_Vector *y, hypre_Vector **z,
                                      HYPRE_Int k, HYPRE_Int unroll,  HYPRE_Real *result_x, HYPRE_Real *result_y);
 HYPRE_Int hypre_SeqVectorMassDotpTwo4(hypre_Vector *x, hypre_Vector *y, hypre_Vector **z,
@@ -596,10 +598,6 @@ hypre_GpuMatData* hypre_CSRMatrixGetGPUMatData(hypre_CSRMatrix *matrix);
 #define hypre_CSRMatrixGPUMatSpMVBuffer(matrix)  ( hypre_GpuMatDataSpMVBuffer (hypre_CSRMatrixGetGPUMatData(matrix)) )
 #endif
 void hypre_CSRMatrixGpuSpMVAnalysis(hypre_CSRMatrix *matrix);
-
-#ifdef HYPRE_WITH_GPU_AWARE_MPI
-HYPRE_Int hypre_SeqVectorInnerProdDevice ( hypre_Vector *x, hypre_Vector *y, HYPRE_Real * result );
-#endif
 
 #ifdef __cplusplus
 }

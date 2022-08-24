@@ -28,7 +28,6 @@ hypre_SeqVectorCreate( HYPRE_Int size )
 
    hypre_VectorData(vector) = NULL;
    hypre_VectorSize(vector) = size;
-
    hypre_VectorNumVectors(vector) = 1;
    hypre_VectorMultiVecStorageMethod(vector) = 0;
 
@@ -69,7 +68,7 @@ hypre_SeqVectorDestroy( hypre_Vector *vector )
          hypre_TFree(hypre_VectorData(vector), memory_location);
       }
 
-      hypre_TFree(vector, HYPRE_MEMORY_HOST);
+	  hypre_TFree(vector, HYPRE_MEMORY_HOST);
    }
 
    return hypre_error_flag;
@@ -825,95 +824,104 @@ hypre_SeqVectorElmdivpyMarked( hypre_Vector *x,
 /*--------------------------------------------------------------------------
  * hypre_SeqVectorInnerProd
  *--------------------------------------------------------------------------*/
-#ifdef HYPRE_WITH_GPU_AWARE_MPI
-
 
 template<HYPRE_Int SIZE>
-__global__ void	hypreGPUKernel_InnerProd_kernel1(const HYPRE_Int n,
-												 const HYPRE_Complex * __restrict__ x,
-												 const HYPRE_Complex * __restrict__ y,
-												 HYPRE_Complex * __restrict__ z)
+__global__ void
+hypreGPUKernel_InnerProd(hypre_DeviceItem &item,
+						 const HYPRE_Int n,
+						 const HYPRE_Complex * __restrict__ x,
+						 const HYPRE_Complex * __restrict__ y,
+						 HYPRE_Complex * __restrict__ z)
 {
    volatile __shared__ HYPRE_Complex shmem[SIZE];
-   HYPRE_Int tidx = threadIdx.x+blockDim.x*blockIdx.x;
+   const HYPRE_Int lane = threadIdx.x%warpSize;
+   const HYPRE_Int warp = threadIdx.x/warpSize;
+   const HYPRE_Int s = blockDim.x*gridDim.x;
+   HYPRE_Int tid = hypre_gpu_get_grid_thread_id<1, 1>(item);
    HYPRE_Complex sum = 0.0;
-   shmem[threadIdx.x] = 0.0;
-   __syncthreads();
 
-   for (int i=tidx; i<n; i+=blockDim.x*gridDim.x)
+   double z1=0;
+   if (tid<n) z1=x[tid]*y[tid];
+   for (tid+=s; tid<n; tid+=s)
    {
-	   shmem[threadIdx.x] += x[tidx]*y[tidx];
+      double z2=x[tid]*y[tid];
+      sum += z1;
+      z1=z2;
    }
-   __syncthreads();
-
-   HYPRE_Int size;
-#pragma unroll
-   for (size=SIZE>>1; size>=warpSize<<1; size>>=1)
-   {
-	   if (hipThreadIdx_x < size)
-	   {
-		   shmem[tid] += shmem[tid + size];
-	   }
-	   __syncthreads();
-   }
+   sum += z1;
 
 #pragma unroll
-  for (int i = warpSize>>1; i > 0; i >>= 1)
-	  sum += __shfl_down(sum, i, warpSize);
+   for (HYPRE_Int i = warpSize>>1; i > 0; i >>= 1)
+      sum += __shfl_down_sync(warpSize, sum, i);
 
-  if (threadIdx.x==0)
-	  z[blockIdx.x] = sum;
+   if (lane==0) shmem[warp] = sum;
+   __syncthreads();
+
+   if (SIZE>=32) { if(threadIdx.x<16) shmem[threadIdx.x]+=shmem[threadIdx.x+16]; }
+   if (SIZE>=16) { if(threadIdx.x<8) shmem[threadIdx.x]+=shmem[threadIdx.x+8]; }
+   if (SIZE>=8) { if(threadIdx.x<4) shmem[threadIdx.x]+=shmem[threadIdx.x+4]; }
+   if (SIZE>=4) { if(threadIdx.x<2) shmem[threadIdx.x]+=shmem[threadIdx.x+2]; }
+   if (threadIdx.x==0) z[blockIdx.x] = shmem[0]+shmem[1];
 }
 
 
 template<HYPRE_Int SIZE>
-__global__ void	hypreGPUKernel_InnerProd_kernel2(const HYPRE_Int n,
-												 const HYPRE_Complex * __restrict__ x,
-												 HYPRE_Complex * __restrict__ y)
+__global__ void
+hypreGPUKernel_InnerProd2(hypre_DeviceItem &item,
+						  const HYPRE_Int n,
+						  const HYPRE_Complex * __restrict__ x,
+						  HYPRE_Complex * __restrict__ z)
 {
    volatile __shared__ HYPRE_Complex shmem[SIZE];
-   HYPRE_Int tidx = threadIdx.x+blockDim.x*blockIdx.x;
+   const HYPRE_Int lane = threadIdx.x%warpSize;
+   const HYPRE_Int warp = threadIdx.x/warpSize;
+   const HYPRE_Int s = blockDim.x*gridDim.x;
+   HYPRE_Int tid = hypre_gpu_get_grid_thread_id<1, 1>(item);
    HYPRE_Complex sum = 0.0;
-   shmem[threadIdx.x] = 0.0;
-   __syncthreads();
 
-   for (int i=tidx; i<n; i+=blockDim.x*gridDim.x)
+   double z1=0;
+   if (tid<n) z1=x[tid];
+   for (tid+=s; tid<n; tid+=s)
    {
-	   shmem[threadIdx.x] += x[tidx];
+      double z2=x[tid];
+      sum += z1;
+      z1=z2;
    }
-   __syncthreads();
-
-   HYPRE_Int size;
-#pragma unroll
-   for (size=SIZE>>1; size>=warpSize<<1; size>>=1)
-   {
-	   if (hipThreadIdx_x < size)
-	   {
-		   shmem[tid] += shmem[tid + size];
-	   }
-	   __syncthreads();
-   }
+   sum += z1;
 
 #pragma unroll
-  for (int i = warpSize>>1; i > 0; i >>= 1)
-	  sum += __shfl_down(sum, i, warpSize);
+   for (HYPRE_Int i = warpSize>>1; i > 0; i >>= 1)
+      sum += __shfl_down_sync(warpSize, sum, i);
 
-  if (threadIdx.x==0)
-	  y[blockIdx.x] = sum;
+   if (lane==0) shmem[warp] = sum;
+   __syncthreads();
+
+   if (SIZE>=32) { if(threadIdx.x<16) shmem[threadIdx.x]+=shmem[threadIdx.x+16]; }
+   if (SIZE>=16) { if(threadIdx.x<8) shmem[threadIdx.x]+=shmem[threadIdx.x+8]; }
+   if (SIZE>=8) { if(threadIdx.x<4) shmem[threadIdx.x]+=shmem[threadIdx.x+4]; }
+   if (SIZE>=4) { if(threadIdx.x<2) shmem[threadIdx.x]+=shmem[threadIdx.x+2]; }
+   if (threadIdx.x==0) z[blockIdx.x] = shmem[0]+shmem[1];
 }
 
 
-
-HYPRE_Int
-hypreDevice_InnerProd(HYPRE_Int n, HYPRE_Complex *x, HYPRE_Complex *y, HYPRE_Complex *result)
+HYPRE_Real
+hypreDevice_InnerProdPinned( hypre_Vector *x,
+							 hypre_Vector *y )
 {
+   HYPRE_Complex *x_data = hypre_VectorData(x);
+   HYPRE_Complex *y_data = hypre_VectorData(y);
+   HYPRE_Int      n      = hypre_VectorSize(x);
+   HYPRE_Real     result = 0.0;
+
+   n *= hypre_VectorNumVectors(x);
+
    /* trivial case */
    if (n <= 0)
    {
       return hypre_error_flag;
    }
 
-   HYPRE_Int warpSize, dev, numSMs;
+   HYPRE_Int dev;
 #if defined(HYPRE_USING_CUDA)
    struct cudaDeviceProp deviceProp;
    HYPRE_CUDA_CALL( cudaGetDevice(&dev) );
@@ -926,53 +934,59 @@ hypreDevice_InnerProd(HYPRE_Int n, HYPRE_Complex *x, HYPRE_Complex *y, HYPRE_Com
    HYPRE_HIP_CALL( hipGetDeviceProperties(&deviceProp, dev) );
 #endif
 
-   // Get the warpSize
-   warpSize = deviceProp.warpSize;
-   numSMs = deviceProp.multiProcessorCount;
-   const HYPRE_Int N1 = 256;
-   HYPRE_Int num_blocks = 32*numSMs;
+   const HYPRE_Int warpSize = deviceProp.warpSize;
+   const HYPRE_Int numSMs = deviceProp.multiProcessorCount;
+   const HYPRE_Int maxThreads = deviceProp.maxThreadsPerMultiProcessor;
+   const HYPRE_Int numThreads = 512;
+   const HYPRE_Int numBlocks = min(4*(maxThreads/numThreads)*numSMs, (n+numThreads-1)/numThreads);
 
-   HYPRE_Real * d_result = hypre_CTAlloc(HYPRE_Real, num_blocks, HYPRE_MEMORY_DEVICE);
-   hypreGPUKernel_InnerProd_kernel1<N1><<<num_blocks,N1>>>(n, x, y, d_result);
+   HYPRE_Complex * hwork = hypre_HandlePinnedWork(hypre_handle());
 
-   num_blocks=1;
-   hypreGPUKernel_InnerProd_kernel2<N1><<<num_blocks,N1>>>(num_blocks, d_result, result);
+   if (!hwork)
+   {
+	  const HYPRE_Int N = 4*(maxThreads/numThreads)*numSMs;
+	  hipHostMalloc((void **)&hwork, N*sizeof(HYPRE_Complex), hipHostRegisterMapped);
+	  hypre_HandlePinnedWork(hypre_handle()) = hwork;
+	  //hypre_printf("%s %s %d : host=%p, device=%p\n",__FILE__,__FUNCTION__,__LINE__,hwork,dwork);
+   }
+   HYPRE_Complex * dwork = (HYPRE_Complex *) hypre_HostGetDevicePointer(hwork);
 
-   hypre_TFree(d_result, HYPRE_MEMORY_DEVICE);
+   /* Do the first part on device. This step writes to Pinned memory on the host. */
+   if (numThreads==128)
+   {
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd<2>, dim3(numBlocks,1,1), dim3(numThreads,1,1), n, x_data, y_data, dwork );
+   }
+   else if (numThreads==256)
+   {
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd<4>, dim3(numBlocks,1,1), dim3(numThreads,1,1), n, x_data, y_data, dwork );
+   }
+   else if (numThreads==512)
+   {
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd<8>, dim3(numBlocks,1,1), dim3(numThreads,1,1), n, x_data, y_data, dwork );
+   }
+   hypre_ForceSyncComputeStream(hypre_handle());
 
-   return hypre_error_flag;
+   for (int i=0; i<numBlocks; ++i) result += hwork[i];
+
+   return result;
 }
 
 
-HYPRE_Int
-hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
-								hypre_Vector *y,
-								HYPRE_Real * result)
+HYPRE_Real
+hypre_SeqVectorInnerProdPinned( hypre_Vector *x,
+								hypre_Vector *y )
 {
 #ifdef HYPRE_PROFILE
    hypre_profile_times[HYPRE_TIMER_ID_BLAS1] -= hypre_MPI_Wtime();
 #endif
 
-   HYPRE_Complex *x_data = hypre_VectorData(x);
-   HYPRE_Complex *y_data = hypre_VectorData(y);
-   HYPRE_Int      size   = hypre_VectorSize(x);
-
-   size *= hypre_VectorNumVectors(x);
+   HYPRE_Real     result = 0.0;
 
 #ifndef HYPRE_COMPLEX
 
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
 
-#if defined(HYPRE_USING_ROCBLAS)
-   HYPRE_ROCBLAS_CALL( rocblas_set_pointer_mode( hypre_HandleRocblasHandle(hypre_handle()),
-												 rocblas_pointer_mode_device) );
-   HYPRE_ROCBLAS_CALL( hypre_rocblas_dot(hypre_HandleRocblasHandle(hypre_handle()), size, x_data, 1,
-										 y_data, 1, result) );
-#else
-   hypreDevice_InnerProd(size, x_data, y_data, result);
-   //HYPRE_Real hresult = HYPRE_THRUST_CALL( inner_product, x_data, x_data + size, y_data, 0.0 );
-   //hypre_TMemcpy(result, &hresult, HYPRE_Real, 1, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
-#endif // #if defined(HYPRE_USING_ROCBLAS)
+   result = hypreDevice_InnerProdPinned(x, y);
 
 #endif // #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
 
@@ -982,9 +996,105 @@ hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
 
 #endif // #ifndef HYPRE_COMPLEX
 
-#if defined(HYPRE_USING_GPU)
-   hypre_SyncComputeStream(hypre_handle());
+#ifdef HYPRE_PROFILE
+   hypre_profile_times[HYPRE_TIMER_ID_BLAS1] += hypre_MPI_Wtime();
 #endif
+
+   return result;
+}
+
+
+
+
+HYPRE_Int
+hypreDevice_InnerProdDevice( hypre_Vector *x,
+							 hypre_Vector *y,
+							 HYPRE_Real * result )
+{
+   HYPRE_Complex *x_data = hypre_VectorData(x);
+   HYPRE_Complex *y_data = hypre_VectorData(y);
+   HYPRE_Int      n      = hypre_VectorSize(x);
+
+   n *= hypre_VectorNumVectors(x);
+
+   /* trivial case */
+   if (n <= 0)
+   {
+      return hypre_error_flag;
+   }
+
+   HYPRE_Int dev;
+#if defined(HYPRE_USING_CUDA)
+   struct cudaDeviceProp deviceProp;
+   HYPRE_CUDA_CALL( cudaGetDevice(&dev) );
+   HYPRE_CUDA_CALL( cudaGetDeviceProperties(&deviceProp, dev) );
+#endif
+
+#if defined(HYPRE_USING_HIP)
+   hipDeviceProp_t deviceProp;
+   HYPRE_HIP_CALL( hipGetDevice(&dev) );
+   HYPRE_HIP_CALL( hipGetDeviceProperties(&deviceProp, dev) );
+#endif
+
+   const HYPRE_Int warpSize = deviceProp.warpSize;
+   const HYPRE_Int numSMs = deviceProp.multiProcessorCount;
+   const HYPRE_Int maxThreads = deviceProp.maxThreadsPerMultiProcessor;
+   const HYPRE_Int numThreads = 512;
+   const HYPRE_Int numBlocks = min(4*(maxThreads/numThreads)*numSMs, (n+numThreads-1)/numThreads);
+
+   HYPRE_Complex * dwork = hypre_HandleDeviceWork(hypre_handle());
+
+   if (!dwork)
+   {
+	  const HYPRE_Int N = 4*(maxThreads/numThreads)*numSMs;
+	  dwork =  hypre_CTAlloc(HYPRE_Real, N, HYPRE_MEMORY_DEVICE);
+	  hypre_HandleDeviceWork(hypre_handle()) = dwork;
+   }
+
+   /* Do the first part on device. This step writes to Pinned memory on the host. */
+   if (numThreads==128)
+   {
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd<2>, dim3(numBlocks,1,1), dim3(numThreads,1,1), n, x_data, y_data, dwork );
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd2<2>, dim3(1,1,1), dim3(numThreads,1,1), numBlocks, dwork, result );
+   }
+   else if (numThreads==256)
+   {
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd<4>, dim3(numBlocks,1,1), dim3(numThreads,1,1), n, x_data, y_data, dwork );
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd2<4>, dim3(1,1,1), dim3(numThreads,1,1), numBlocks, dwork, result );
+   }
+   else if (numThreads==512)
+   {
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd<8>, dim3(numBlocks,1,1), dim3(numThreads,1,1), n, x_data, y_data, dwork );
+	   HYPRE_GPU_LAUNCH( hypreGPUKernel_InnerProd2<8>, dim3(1,1,1), dim3(numThreads,1,1), numBlocks, dwork, result );
+   }
+   hypre_ForceSyncComputeStream(hypre_handle());
+
+   return hypre_error_flag;
+}
+
+
+HYPRE_Int
+hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
+								hypre_Vector *y,
+								HYPRE_Real * result )
+{
+#ifdef HYPRE_PROFILE
+   hypre_profile_times[HYPRE_TIMER_ID_BLAS1] -= hypre_MPI_Wtime();
+#endif
+
+#ifndef HYPRE_COMPLEX
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+
+   hypreDevice_InnerProdDevice(x, y, result);
+
+#endif // #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+
+#else // #ifndef HYPRE_COMPLEX
+
+#error "Complex inner product"
+
+#endif // #ifndef HYPRE_COMPLEX
 
 #ifdef HYPRE_PROFILE
    hypre_profile_times[HYPRE_TIMER_ID_BLAS1] += hypre_MPI_Wtime();
@@ -993,7 +1103,10 @@ hypre_SeqVectorInnerProdDevice( hypre_Vector *x,
    return hypre_error_flag;
 }
 
-#endif
+
+
+
+
 
 HYPRE_Real
 hypre_SeqVectorInnerProd( hypre_Vector *x,
