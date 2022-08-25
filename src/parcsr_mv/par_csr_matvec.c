@@ -164,6 +164,23 @@ hypre_ParCSRMatrixMatvecOutOfPlace( HYPRE_Complex       alpha,
    hypre_SeqVectorSetDataOwner(x_tmp, 0);
 #endif
 
+   /* allocate pinned memory buffers */
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   HYPRE_Int Nsends = hypre_ParCSRCommPkgSendMapStart(comm_pkg, num_sends);
+   HYPRE_Int Nrecvs = hypre_ParCSRCommPkgRecvVecStart(comm_pkg, num_recvs);
+   HYPRE_Int N = Nsends>Nrecvs ? Nsends : Nrecvs;
+   if (!hypre_ParCSRMatrixSendPinned(A))
+   {
+      char * temp = _hypre_TAlloc(char, num_vectors*N*sizeof(HYPRE_Complex), hypre_MEMORY_HOST_PINNED);
+      hypre_ParCSRMatrixSendPinned(A) = temp;
+   }
+   if (!hypre_ParCSRMatrixRecvPinned(A))
+   {
+      char * temp = _hypre_TAlloc(char, num_vectors*N*sizeof(HYPRE_Complex), hypre_MEMORY_HOST_PINNED);
+      hypre_ParCSRMatrixRecvPinned(A) = temp;
+   }
+#endif
+
    hypre_SeqVectorInitialize_v2(x_tmp, HYPRE_MEMORY_DEVICE);
    x_tmp_data = hypre_VectorData(x_tmp);
 
@@ -203,12 +220,17 @@ hypre_ParCSRMatrixMatvecOutOfPlace( HYPRE_Complex       alpha,
    /* pack send data on Device */
 
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
-   HYPRE_THRUST_CALL( gather,
-                      hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg),
-                      hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg) +
-                      hypre_ParCSRCommPkgSendMapStart(comm_pkg, num_sends),
-                      x_local_data,
-                      x_buf_data );
+   /* Write the data directly into the Pinned memory buffer */
+   if (N)
+   {
+      x_buf_data = (HYPRE_Complex *)hypre_HostGetDevicePointer(hypre_ParCSRMatrixSendPinned(A));
+      HYPRE_THRUST_CALL( gather,
+                         hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg),
+                         hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg) +
+                         hypre_ParCSRCommPkgSendMapStart(comm_pkg, num_sends),
+                         x_local_data,
+                         x_buf_data );
+   }
 
 #elif defined(HYPRE_USING_SYCL)
    auto permuted_source =
@@ -271,9 +293,17 @@ hypre_ParCSRMatrixMatvecOutOfPlace( HYPRE_Complex       alpha,
    hypre_ParCSRPersistentCommHandleStart(persistent_comm_handle, HYPRE_MEMORY_DEVICE, x_buf_data);
 
 #else
+
+   #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   comm_handle = hypre_ParCSRCommHandleCreate_v3(1, comm_pkg,
+                                                 HYPRE_MEMORY_DEVICE, x_buf_data, hypre_ParCSRMatrixSendPinned(A),
+                                                 HYPRE_MEMORY_DEVICE, x_tmp_data, hypre_ParCSRMatrixRecvPinned(A));
+#else
    comm_handle = hypre_ParCSRCommHandleCreate_v2(1, comm_pkg,
                                                  HYPRE_MEMORY_DEVICE, x_buf_data,
                                                  HYPRE_MEMORY_DEVICE, x_tmp_data);
+#endif
+
 #endif
 
 #ifdef HYPRE_PROFILE
@@ -293,7 +323,13 @@ hypre_ParCSRMatrixMatvecOutOfPlace( HYPRE_Complex       alpha,
 #ifdef HYPRE_USING_PERSISTENT_COMM
    hypre_ParCSRPersistentCommHandleWait(persistent_comm_handle, HYPRE_MEMORY_DEVICE, x_tmp_data);
 #else
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   hypre_ParCSRCommHandleDestroy_v3(comm_handle);
+#else
    hypre_ParCSRCommHandleDestroy(comm_handle);
+#endif
+
 #endif
 
 #ifdef HYPRE_PROFILE
@@ -502,6 +538,28 @@ hypre_ParCSRMatrixMatvecT( HYPRE_Complex       alpha,
    hypre_SeqVectorSetDataOwner(y_tmp, 0);
 #endif
 
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   HYPRE_Int Nsends = hypre_ParCSRCommPkgSendMapStart(comm_pkg, num_sends);
+   HYPRE_Int Nrecvs = hypre_ParCSRCommPkgRecvVecStart(comm_pkg, num_recvs);
+   HYPRE_Int N = Nsends>Nrecvs ? Nsends : Nrecvs;
+   if (!hypre_ParCSRMatrixSendPinned(A))
+   {
+      char * temp = _hypre_TAlloc(char, num_vectors*N*sizeof(HYPRE_Complex), hypre_MEMORY_HOST_PINNED);
+      hypre_ParCSRMatrixSendPinned(A) = temp;
+   }
+   if (!hypre_ParCSRMatrixRecvPinned(A))
+   {
+      char * temp = _hypre_TAlloc(char, num_vectors*N*sizeof(HYPRE_Complex), hypre_MEMORY_HOST_PINNED);
+      hypre_ParCSRMatrixRecvPinned(A) = temp;
+   }
+
+   /* Reassign the pointer of the first SpMV output so that kernel writes data directly into the Pinned memory buffer */
+   if (N)
+   {
+       hypre_VectorData(y_tmp) = (HYPRE_Complex *)hypre_HostGetDevicePointer(hypre_ParCSRMatrixSendPinned(A));
+   }
+#endif
+
    hypre_SeqVectorInitialize_v2(y_tmp, HYPRE_MEMORY_DEVICE);
    y_tmp_data = hypre_VectorData(y_tmp);
 
@@ -573,9 +631,17 @@ hypre_ParCSRMatrixMatvecT( HYPRE_Complex       alpha,
    hypre_ParCSRPersistentCommHandleStart(persistent_comm_handle, HYPRE_MEMORY_DEVICE, y_tmp_data);
 
 #else
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   comm_handle = hypre_ParCSRCommHandleCreate_v3(2, comm_pkg,
+                                                 HYPRE_MEMORY_DEVICE, y_tmp_data, hypre_ParCSRMatrixSendPinned(A),
+                                                 HYPRE_MEMORY_DEVICE, y_buf_data, hypre_ParCSRMatrixRecvPinned(A) );
+#else
    comm_handle = hypre_ParCSRCommHandleCreate_v2(2, comm_pkg,
                                                  HYPRE_MEMORY_DEVICE, y_tmp_data,
                                                  HYPRE_MEMORY_DEVICE, y_buf_data );
+#endif
+
 #endif
 
 #ifdef HYPRE_PROFILE
@@ -605,7 +671,13 @@ hypre_ParCSRMatrixMatvecT( HYPRE_Complex       alpha,
                                         HYPRE_MEMORY_DEVICE,
                                         y_buf_data);
 #else
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP)
+   hypre_ParCSRCommHandleDestroy_v3(comm_handle);
+#else
    hypre_ParCSRCommHandleDestroy(comm_handle);
+#endif
+
 #endif
 
 #ifdef HYPRE_PROFILE
