@@ -21,7 +21,12 @@ hypre_CsrsvData*
 hypre_CsrsvDataCreate()
 {
    hypre_CsrsvData *data = hypre_CTAlloc(hypre_CsrsvData, 1, HYPRE_MEMORY_HOST);
-
+#if defined(HYPRE_USING_CUSPARSE)
+   hypre_CsrsvDataSolvePolicy(data) = CUSPARSE_SOLVE_POLICY_USE_LEVEL;
+#elif defined(HYPRE_USING_ROCSPARSE)
+   hypre_CsrsvDataSolvePolicy(data) = rocsparse_solve_policy_auto;
+   hypre_CsrsvDataAnalysisPolicy(data) = rocsparse_analysis_policy_reuse;
+#endif
    return data;
 }
 
