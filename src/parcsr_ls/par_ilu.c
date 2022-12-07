@@ -24,14 +24,11 @@ hypre_ILUCreate()
    ilu_data                               = hypre_CTAlloc(hypre_ParILUData,  1, HYPRE_MEMORY_HOST);
 
 #if defined(HYPRE_USING_CUDA) && defined(HYPRE_USING_CUSPARSE)
-   hypre_ParILUDataMatLMatrixDescription(ilu_data) = NULL;
-   hypre_ParILUDataMatUMatrixDescription(ilu_data) = NULL;
-   hypre_ParILUDataMatBLILUSolveInfo(ilu_data) = NULL;
-   hypre_ParILUDataMatBUILUSolveInfo(ilu_data) = NULL;
-   hypre_ParILUDataMatSLILUSolveInfo(ilu_data) = NULL;
-   hypre_ParILUDataMatSUILUSolveInfo(ilu_data) = NULL;
-   hypre_ParILUDataILUSolveBuffer(ilu_data) = NULL;
-   hypre_ParILUDataILUSolvePolicy(ilu_data) = CUSPARSE_SOLVE_POLICY_USE_LEVEL;
+   hypre_ParILUDataMatLMatData(ilu_data) = NULL;
+   hypre_ParILUDataMatUMatData(ilu_data)  = NULL;
+   hypre_ParILUDataMatALUCsrsvData(ilu_data) = NULL;
+   hypre_ParILUDataMatBLUCsrsvData(ilu_data) = NULL;
+   hypre_ParILUDataMatSLUCsrsvData(ilu_data) = NULL;
    hypre_ParILUDataAperm(ilu_data) = NULL;
    hypre_ParILUDataMatBILUDevice(ilu_data) = NULL;
    hypre_ParILUDataMatSILUDevice(ilu_data) = NULL;
@@ -157,50 +154,33 @@ hypre_ILUDestroy( void *data )
    hypre_ParILUData * ilu_data = (hypre_ParILUData*) data;
 
 #if defined(HYPRE_USING_CUDA) && defined(HYPRE_USING_CUSPARSE)
-   if (hypre_ParILUDataILUSolveBuffer(ilu_data))
+   if (hypre_ParILUDataMatLMatData(ilu_data))
    {
-      hypre_TFree(hypre_ParILUDataILUSolveBuffer(ilu_data), HYPRE_MEMORY_DEVICE);
-      hypre_ParILUDataILUSolveBuffer(ilu_data) = NULL;
+      hypre_GpuMatDataDestroy(hypre_ParILUDataMatLMatData(ilu_data));
+      hypre_ParILUDataMatLMatData(ilu_data) = NULL;
    }
-   if (hypre_ParILUDataMatLMatrixDescription(ilu_data))
+
+   if (hypre_ParILUDataMatUMatData(ilu_data))
    {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyMatDescr(hypre_ParILUDataMatLMatrixDescription(ilu_data))) );
-      hypre_ParILUDataMatLMatrixDescription(ilu_data) = NULL;
+      hypre_GpuMatDataDestroy(hypre_ParILUDataMatUMatData(ilu_data));
+      hypre_ParILUDataMatUMatData(ilu_data) = NULL;
    }
-   if (hypre_ParILUDataMatUMatrixDescription(ilu_data))
+   if (hypre_ParILUDataMatALUCsrsvData(ilu_data))
    {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyMatDescr(hypre_ParILUDataMatUMatrixDescription(ilu_data))) );
-      hypre_ParILUDataMatUMatrixDescription(ilu_data) = NULL;
+      hypre_CsrsvDataDestroy(hypre_ParILUDataMatALUCsrsvData(ilu_data));
+      hypre_ParILUDataMatALUCsrsvData(ilu_data) = NULL;
    }
-   if (hypre_ParILUDataMatALILUSolveInfo(ilu_data))
+
+   if (hypre_ParILUDataMatBLUCsrsvData(ilu_data))
    {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyCsrsv2Info(hypre_ParILUDataMatALILUSolveInfo(ilu_data))) );
-      hypre_ParILUDataMatALILUSolveInfo(ilu_data) = NULL;
+      hypre_CsrsvDataDestroy(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+      hypre_ParILUDataMatBLUCsrsvData(ilu_data) = NULL;
    }
-   if (hypre_ParILUDataMatAUILUSolveInfo(ilu_data))
+
+   if (hypre_ParILUDataMatSLUCsrsvData(ilu_data))
    {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyCsrsv2Info(hypre_ParILUDataMatAUILUSolveInfo(ilu_data))) );
-      hypre_ParILUDataMatAUILUSolveInfo(ilu_data) = NULL;
-   }
-   if (hypre_ParILUDataMatBLILUSolveInfo(ilu_data))
-   {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyCsrsv2Info(hypre_ParILUDataMatBLILUSolveInfo(ilu_data))) );
-      hypre_ParILUDataMatBLILUSolveInfo(ilu_data) = NULL;
-   }
-   if (hypre_ParILUDataMatBUILUSolveInfo(ilu_data))
-   {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyCsrsv2Info(hypre_ParILUDataMatBUILUSolveInfo(ilu_data))) );
-      hypre_ParILUDataMatBUILUSolveInfo(ilu_data) = NULL;
-   }
-   if (hypre_ParILUDataMatSLILUSolveInfo(ilu_data))
-   {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyCsrsv2Info(hypre_ParILUDataMatSLILUSolveInfo(ilu_data))) );
-      hypre_ParILUDataMatSLILUSolveInfo(ilu_data) = NULL;
-   }
-   if (hypre_ParILUDataMatSUILUSolveInfo(ilu_data))
-   {
-      HYPRE_CUSPARSE_CALL( (cusparseDestroyCsrsv2Info(hypre_ParILUDataMatSUILUSolveInfo(ilu_data))) );
-      hypre_ParILUDataMatSUILUSolveInfo(ilu_data) = NULL;
+      hypre_CsrsvDataDestroy(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
+      hypre_ParILUDataMatSLUCsrsvData(ilu_data) = NULL;
    }
    if (hypre_ParILUDataMatAILUDevice(ilu_data))
    {
@@ -2947,13 +2927,12 @@ hypre_ParILUCusparseSchurGMRESMatvec( void   *matvec_data,
    HYPRE_Int         A_diag_nnz                 = A_diag_i[A_diag_n];
    HYPRE_Int         *A_diag_fake_i             = hypre_ParILUDataMatAFakeDiagonal(ilu_data);
 
-   cusparseMatDescr_t      matL_des             = hypre_ParILUDataMatLMatrixDescription(ilu_data);
-   cusparseMatDescr_t      matU_des             = hypre_ParILUDataMatUMatrixDescription(ilu_data);
-   void                    *ilu_solve_buffer    = hypre_ParILUDataILUSolveBuffer(
-                                                     ilu_data);//device memory
-   cusparseSolvePolicy_t   ilu_solve_policy     = hypre_ParILUDataILUSolvePolicy(ilu_data);
-   csrsv2Info_t            matSL_info           = hypre_ParILUDataMatSLILUSolveInfo(ilu_data);
-   csrsv2Info_t            matSU_info           = hypre_ParILUDataMatSUILUSolveInfo(ilu_data);
+	csrsv2Info_t            matSL_info           = hypre_CsrsvDataInfoL(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
+	csrsv2Info_t            matSU_info           = hypre_CsrsvDataInfoU(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
+   cusparseMatDescr_t      matL_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatLMatData(ilu_data));
+   cusparseMatDescr_t      matU_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatUMatData(ilu_data));
+	void                    *ilu_solve_buffer    = hypre_CsrsvDataBuffer(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
+   cusparseSolvePolicy_t   ilu_solve_policy     = hypre_CsrsvDataSolvePolicy(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
 
    hypre_ParVector         *xtemp               = hypre_ParILUDataXTemp(ilu_data);
    hypre_Vector            *xtemp_local         = hypre_ParVectorLocalVector(xtemp);
@@ -3044,11 +3023,10 @@ hypre_ParILURAPSchurGMRESSolve( void               *ilu_vdata,
    //hypre_ParCSRMatrix      *Aperm               = hypre_ParILUDataAperm(ilu_data);
 
    cusparseHandle_t        handle               = hypre_HandleCusparseHandle(hypre_handle());
-   cusparseMatDescr_t      matL_des             = hypre_ParILUDataMatLMatrixDescription(ilu_data);
-   cusparseMatDescr_t      matU_des             = hypre_ParILUDataMatUMatrixDescription(ilu_data);
-   void                    *ilu_solve_buffer    = hypre_ParILUDataILUSolveBuffer(
-                                                     ilu_data);//device memory
-   cusparseSolvePolicy_t   ilu_solve_policy     = hypre_ParILUDataILUSolvePolicy(ilu_data);
+   cusparseMatDescr_t      matL_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatLMatData(ilu_data));
+   cusparseMatDescr_t      matU_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatUMatData(ilu_data));
+   cusparseSolvePolicy_t   ilu_solve_policy     = hypre_CsrsvDataSolvePolicy(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
+   void                    *ilu_solve_buffer    = hypre_CsrsvDataBuffer(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
 
    hypre_ParCSRMatrix      *S                   = hypre_ParILUDataMatS(ilu_data);
    hypre_CSRMatrix         *SLU                 = hypre_ParCSRMatrixDiag(S);
@@ -3057,8 +3035,8 @@ hypre_ParILURAPSchurGMRESSolve( void               *ilu_vdata,
    HYPRE_Real              *SLU_data            = hypre_CSRMatrixData(SLU);
    HYPRE_Int               SLU_nnz              = hypre_CSRMatrixNumNonzeros(SLU);
 
-   csrsv2Info_t            matSL_info           = hypre_ParILUDataMatSLILUSolveInfo(ilu_data);
-   csrsv2Info_t            matSU_info           = hypre_ParILUDataMatSUILUSolveInfo(ilu_data);
+   csrsv2Info_t            matSL_info           = hypre_CsrsvDataInfoL(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
+   csrsv2Info_t            matSU_info           = hypre_CsrsvDataInfoU(hypre_ParILUDataMatSLUCsrsvData(ilu_data));
 
    //HYPRE_Int               n                    = hypre_CSRMatrixNumRows(hypre_ParCSRMatrixDiag(Aperm));
    HYPRE_Int               m                    = hypre_CSRMatrixNumRows(SLU);
@@ -3137,11 +3115,10 @@ hypre_ParILURAPSchurGMRESMatvec( void   *matvec_data,
          hypre_ParCSRMatrix      *Aperm               = hypre_ParILUDataAperm(ilu_data);
 
          cusparseHandle_t        handle               = hypre_HandleCusparseHandle(hypre_handle());
-         cusparseMatDescr_t      matL_des             = hypre_ParILUDataMatLMatrixDescription(ilu_data);
-         cusparseMatDescr_t      matU_des             = hypre_ParILUDataMatUMatrixDescription(ilu_data);
-         void                    *ilu_solve_buffer    = hypre_ParILUDataILUSolveBuffer(
-                                                           ilu_data);//device memory
-         cusparseSolvePolicy_t   ilu_solve_policy     = hypre_ParILUDataILUSolvePolicy(ilu_data);
+         cusparseMatDescr_t      matL_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatLMatData(ilu_data));
+         cusparseMatDescr_t      matU_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatUMatData(ilu_data));
+         cusparseSolvePolicy_t   ilu_solve_policy     = hypre_CsrsvDataSolvePolicy(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+         void                    *ilu_solve_buffer    = hypre_CsrsvDataBuffer(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
 
          hypre_CSRMatrix         *EiU                 = hypre_ParILUDataMatEDevice(ilu_data);
          hypre_CSRMatrix         *iLF                 = hypre_ParILUDataMatFDevice(ilu_data);
@@ -3151,8 +3128,8 @@ hypre_ParILURAPSchurGMRESMatvec( void   *matvec_data,
          HYPRE_Real              *BLU_data            = hypre_CSRMatrixData(BLU);
          HYPRE_Int               BLU_nnz              = hypre_CSRMatrixNumNonzeros(BLU);
 
-         csrsv2Info_t            matBL_info           = hypre_ParILUDataMatBLILUSolveInfo(ilu_data);
-         csrsv2Info_t            matBU_info           = hypre_ParILUDataMatBUILUSolveInfo(ilu_data);
+         csrsv2Info_t            matBL_info           = hypre_CsrsvDataInfoL(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+         csrsv2Info_t            matBU_info           = hypre_CsrsvDataInfoU(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
 
          HYPRE_Int               n                    = hypre_CSRMatrixNumRows(hypre_ParCSRMatrixDiag(
                                                                                   Aperm));
@@ -3296,11 +3273,10 @@ hypre_ParILURAPSchurGMRESMatvec( void   *matvec_data,
          //hypre_ParCSRMatrix      *Aperm               = hypre_ParILUDataAperm(ilu_data);
 
          cusparseHandle_t        handle               = hypre_HandleCusparseHandle(hypre_handle());
-         cusparseMatDescr_t      matL_des             = hypre_ParILUDataMatLMatrixDescription(ilu_data);
-         cusparseMatDescr_t      matU_des             = hypre_ParILUDataMatUMatrixDescription(ilu_data);
-         void                    *ilu_solve_buffer    = hypre_ParILUDataILUSolveBuffer(
-                                                           ilu_data);//device memory
-         cusparseSolvePolicy_t   ilu_solve_policy     = hypre_ParILUDataILUSolvePolicy(ilu_data);
+         cusparseMatDescr_t      matL_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatLMatData(ilu_data));
+         cusparseMatDescr_t      matU_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatUMatData(ilu_data));
+         cusparseSolvePolicy_t   ilu_solve_policy     = hypre_CsrsvDataSolvePolicy(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+         void                    *ilu_solve_buffer    = hypre_CsrsvDataBuffer(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
 
          hypre_CSRMatrix         *EiU                 = hypre_ParILUDataMatEDevice(ilu_data);
          hypre_CSRMatrix         *iLF                 = hypre_ParILUDataMatFDevice(ilu_data);
@@ -3311,8 +3287,8 @@ hypre_ParILURAPSchurGMRESMatvec( void   *matvec_data,
          HYPRE_Real              *BLU_data            = hypre_CSRMatrixData(BLU);
          HYPRE_Int               BLU_nnz              = hypre_CSRMatrixNumNonzeros(BLU);
 
-         csrsv2Info_t            matBL_info           = hypre_ParILUDataMatBLILUSolveInfo(ilu_data);
-         csrsv2Info_t            matBU_info           = hypre_ParILUDataMatBUILUSolveInfo(ilu_data);
+         csrsv2Info_t            matBL_info           = hypre_CsrsvDataInfoL(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+         csrsv2Info_t            matBU_info           = hypre_CsrsvDataInfoU(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
 
          //HYPRE_Int               n                    = hypre_CSRMatrixNumRows(hypre_ParCSRMatrixDiag(Aperm));
          HYPRE_Int               nLU                  = hypre_CSRMatrixNumRows(C);
@@ -3372,11 +3348,10 @@ hypre_ParILURAPSchurGMRESMatvec( void   *matvec_data,
          hypre_ParCSRMatrix      *Aperm               = hypre_ParILUDataAperm(ilu_data);
 
          cusparseHandle_t        handle               = hypre_HandleCusparseHandle(hypre_handle());
-         cusparseMatDescr_t      matL_des             = hypre_ParILUDataMatLMatrixDescription(ilu_data);
-         cusparseMatDescr_t      matU_des             = hypre_ParILUDataMatUMatrixDescription(ilu_data);
-         void                    *ilu_solve_buffer    = hypre_ParILUDataILUSolveBuffer(
-                                                           ilu_data);//device memory
-         cusparseSolvePolicy_t   ilu_solve_policy     = hypre_ParILUDataILUSolvePolicy(ilu_data);
+         cusparseMatDescr_t      matL_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatLMatData(ilu_data));
+         cusparseMatDescr_t      matU_des             = hypre_GpuMatDataMatDecsr(hypre_ParILUDataMatUMatData(ilu_data));
+         cusparseSolvePolicy_t   ilu_solve_policy     = hypre_CsrsvDataSolvePolicy(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+         void                    *ilu_solve_buffer    = hypre_CsrsvDataBuffer(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
 
          hypre_CSRMatrix         *EiU                 = hypre_ParILUDataMatEDevice(ilu_data);
          hypre_CSRMatrix         *iLF                 = hypre_ParILUDataMatFDevice(ilu_data);
@@ -3386,8 +3361,8 @@ hypre_ParILURAPSchurGMRESMatvec( void   *matvec_data,
          HYPRE_Real              *BLU_data            = hypre_CSRMatrixData(BLU);
          HYPRE_Int               BLU_nnz              = hypre_CSRMatrixNumNonzeros(BLU);
 
-         csrsv2Info_t            matBL_info           = hypre_ParILUDataMatBLILUSolveInfo(ilu_data);
-         csrsv2Info_t            matBU_info           = hypre_ParILUDataMatBUILUSolveInfo(ilu_data);
+         csrsv2Info_t            matBL_info           = hypre_CsrsvDataInfoL(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
+         csrsv2Info_t            matBU_info           = hypre_CsrsvDataInfoU(hypre_ParILUDataMatBLUCsrsvData(ilu_data));
 
          HYPRE_Int               n                    = hypre_CSRMatrixNumRows(hypre_ParCSRMatrixDiag(
                                                                                   Aperm));
