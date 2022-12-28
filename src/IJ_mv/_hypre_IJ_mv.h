@@ -89,8 +89,11 @@ typedef struct
    char                *stack_sora;              /* Set (1) or Add (0) */
    HYPRE_Int            usr_on_proc_elmts;       /* user given num elmt on-proc */
    HYPRE_Int            usr_off_proc_elmts;      /* user given num elmt off-proc */
-   HYPRE_BigInt         init_alloc_factor;
-   HYPRE_BigInt         grow_factor;
+   HYPRE_Int            usr_off_proc_send_elmts;    /* user given num elmts to send to another process */
+   HYPRE_Int            usr_off_proc_recv_elmts;    /* user given num elmts to receive from all other processes */
+   char                 usr_elmts_filled;       /* flag for indicating that the external elements have been filled from external (user) calls to Set/AddToValues calls */
+   HYPRE_Real           init_alloc_factor;
+   HYPRE_Real           grow_factor;
 #endif
 } hypre_AuxParCSRMatrix;
 
@@ -133,6 +136,9 @@ typedef struct
 #define hypre_AuxParCSRMatrixStackSorA(matrix)            ((matrix) -> stack_sora)
 #define hypre_AuxParCSRMatrixUsrOnProcElmts(matrix)       ((matrix) -> usr_on_proc_elmts)
 #define hypre_AuxParCSRMatrixUsrOffProcElmts(matrix)      ((matrix) -> usr_off_proc_elmts)
+#define hypre_AuxParCSRMatrixUsrOffProcSendElmts(matrix)  ((matrix) -> usr_off_proc_send_elmts)
+#define hypre_AuxParCSRMatrixUsrOffProcRecvElmts(matrix)  ((matrix) -> usr_off_proc_recv_elmts)
+#define hypre_AuxParCSRMatrixUsrElmtsFilled(matrix)       ((matrix) -> usr_elmts_filled)
 #define hypre_AuxParCSRMatrixInitAllocFactor(matrix)      ((matrix) -> init_alloc_factor)
 #define hypre_AuxParCSRMatrixGrowFactor(matrix)           ((matrix) -> grow_factor)
 #endif
@@ -178,6 +184,10 @@ typedef struct
    HYPRE_Complex       *stack_data;           /* contains corresponding data */
    char                *stack_sora;
    HYPRE_Int            usr_off_proc_elmts;   /* the num of off-proc elements usr guided */
+   HYPRE_Int            usr_on_proc_elmts;          /* user given num elmt on-proc */
+   HYPRE_Int            usr_off_proc_send_elmts;    /* user given num elmts to send to another process */
+   HYPRE_Int            usr_off_proc_recv_elmts;    /* user given num elmts to receive from all other processes */
+   char                 usr_elmts_filled;       /* flag for indicating that the external elements have been filled from external (user) calls to Set/AddToValues calls */
    HYPRE_Real           init_alloc_factor;
    HYPRE_Real           grow_factor;
 #endif
@@ -202,6 +212,10 @@ typedef struct
 #define hypre_AuxParVectorStackData(vector)            ((vector) -> stack_data)
 #define hypre_AuxParVectorStackSorA(vector)            ((vector) -> stack_sora)
 #define hypre_AuxParVectorUsrOffProcElmts(vector)      ((vector) -> usr_off_proc_elmts)
+#define hypre_AuxParVectorUsrOnProcElmts(vector)       ((vector) -> usr_on_proc_elmts)
+#define hypre_AuxParVectorUsrOffProcSendElmts(vector)  ((vector) -> usr_off_proc_send_elmts)
+#define hypre_AuxParVectorUsrOffProcRecvElmts(vector)  ((vector) -> usr_off_proc_recv_elmts)
+#define hypre_AuxParVectorUsrElmtsFilled(vector)       ((vector) -> usr_elmts_filled)
 #define hypre_AuxParVectorInitAllocFactor(vector)      ((vector) -> init_alloc_factor)
 #define hypre_AuxParVectorGrowFactor(vector)           ((vector) -> grow_factor)
 #endif
@@ -435,6 +449,9 @@ HYPRE_Int hypre_IJMatrixSetDiagOffdSizesParCSR ( hypre_IJMatrix *matrix,
                                                  const HYPRE_Int *diag_sizes, const HYPRE_Int *offdiag_sizes );
 HYPRE_Int hypre_IJMatrixSetMaxOffProcElmtsParCSR ( hypre_IJMatrix *matrix,
                                                    HYPRE_Int max_off_proc_elmts );
+HYPRE_Int hypre_IJMatrixSetMaxOnProcElmtsParCSR ( hypre_IJMatrix *matrix , HYPRE_Int max_on_proc_elmts );
+HYPRE_Int hypre_IJMatrixSetOffProcSendElmtsParCSR ( hypre_IJMatrix *matrix , HYPRE_Int off_proc_send_elmts );
+HYPRE_Int hypre_IJMatrixSetOffProcRecvElmtsParCSR ( hypre_IJMatrix *matrix , HYPRE_Int off_proc_recv_elmts );
 HYPRE_Int hypre_IJMatrixInitializeParCSR ( hypre_IJMatrix *matrix );
 HYPRE_Int hypre_IJMatrixGetRowCountsParCSR ( hypre_IJMatrix *matrix, HYPRE_Int nrows,
                                              HYPRE_BigInt *rows, HYPRE_Int *ncols );
@@ -475,7 +492,10 @@ HYPRE_Int hypre_IJMatrixInitializeParCSR_v2(hypre_IJMatrix *matrix,
                                             HYPRE_MemoryLocation memory_location);
 HYPRE_Int hypre_IJMatrixSetConstantValuesParCSRDevice( hypre_IJMatrix *matrix,
                                                        HYPRE_Complex value );
-
+HYPRE_Int hypre_IJMatrixSetAddValuesParCSRDeviceFast ( hypre_IJMatrix *matrix, HYPRE_Int nrows,
+																		 HYPRE_Int *ncols, const HYPRE_BigInt *rows, const HYPRE_Int *row_indexes, const HYPRE_BigInt *cols,
+																		 const HYPRE_Complex *values, const char *action );
+HYPRE_Int hypre_IJMatrixAssembleParCSRDeviceFast(hypre_IJMatrix *matrix);
 /* IJMatrix_petsc.c */
 HYPRE_Int hypre_IJMatrixSetLocalSizePETSc ( hypre_IJMatrix *matrix, HYPRE_Int local_m,
                                             HYPRE_Int local_n );
@@ -512,6 +532,9 @@ HYPRE_Int hypre_IJVectorInitializePar_v2(hypre_IJVector *vector,
                                          HYPRE_MemoryLocation memory_location);
 HYPRE_Int hypre_IJVectorSetMaxOffProcElmtsPar ( hypre_IJVector *vector,
                                                 HYPRE_Int max_off_proc_elmts );
+HYPRE_Int hypre_IJVectorSetMaxOnProcElmtsPar ( hypre_IJVector *vector , HYPRE_Int max_on_proc_elmts );
+HYPRE_Int hypre_IJVectorSetOffProcSendElmtsPar ( hypre_IJVector *vector , HYPRE_Int off_proc_send_elmts );
+HYPRE_Int hypre_IJVectorSetOffProcRecvElmtsPar ( hypre_IJVector *vector , HYPRE_Int off_proc_recv_elmts );
 HYPRE_Int hypre_IJVectorDistributePar ( hypre_IJVector *vector, const HYPRE_Int *vec_starts );
 HYPRE_Int hypre_IJVectorZeroValuesPar ( hypre_IJVector *vector );
 HYPRE_Int hypre_IJVectorSetComponentPar ( hypre_IJVector *vector, HYPRE_Int component);
@@ -528,6 +551,9 @@ HYPRE_Int hypre_IJVectorAssembleOffProcValsPar ( hypre_IJVector *vector,
 HYPRE_Int hypre_IJVectorSetAddValuesParDevice(hypre_IJVector *vector, HYPRE_Int num_values,
                                               const HYPRE_BigInt *indices, const HYPRE_Complex *values, const char *action);
 HYPRE_Int hypre_IJVectorAssembleParDevice(hypre_IJVector *vector);
+HYPRE_Int hypre_IJVectorSetAddValuesParDeviceFast(hypre_IJVector *vector, HYPRE_Int num_values,
+																  const HYPRE_BigInt *indices, const HYPRE_Complex *values, const char *action);
+HYPRE_Int hypre_IJVectorAssembleParDeviceFast(hypre_IJVector *vector);
 
 HYPRE_Int hypre_IJVectorUpdateValuesDevice( hypre_IJVector *vector, HYPRE_Int num_values,
                                             const HYPRE_BigInt *indices, const HYPRE_Complex *values, HYPRE_Int action);
@@ -557,6 +583,9 @@ HYPRE_Int HYPRE_IJMatrixSetRowSizes ( HYPRE_IJMatrix matrix, const HYPRE_Int *si
 HYPRE_Int HYPRE_IJMatrixSetDiagOffdSizes ( HYPRE_IJMatrix matrix, const HYPRE_Int *diag_sizes,
                                            const HYPRE_Int *offdiag_sizes );
 HYPRE_Int HYPRE_IJMatrixSetMaxOffProcElmts ( HYPRE_IJMatrix matrix, HYPRE_Int max_off_proc_elmts );
+HYPRE_Int HYPRE_IJMatrixSetMaxOnProcElmts ( HYPRE_IJMatrix matrix , HYPRE_Int max_on_proc_elmts );
+HYPRE_Int HYPRE_IJMatrixSetOffProcSendElmts ( HYPRE_IJMatrix matrix , HYPRE_Int off_proc_send_elmts );
+HYPRE_Int HYPRE_IJMatrixSetOffProcRecvElmts ( HYPRE_IJMatrix matrix , HYPRE_Int off_proc_recv_elmts );
 HYPRE_Int HYPRE_IJMatrixRead ( const char *filename, MPI_Comm comm, HYPRE_Int type,
                                HYPRE_IJMatrix *matrix_ptr );
 HYPRE_Int HYPRE_IJMatrixReadMM( const char *filename, MPI_Comm comm, HYPRE_Int type,
@@ -584,6 +613,9 @@ HYPRE_Int HYPRE_IJVectorAssemble ( HYPRE_IJVector vector );
 HYPRE_Int HYPRE_IJVectorGetValues ( HYPRE_IJVector vector, HYPRE_Int nvalues,
                                     const HYPRE_BigInt *indices, HYPRE_Complex *values );
 HYPRE_Int HYPRE_IJVectorSetMaxOffProcElmts ( HYPRE_IJVector vector, HYPRE_Int max_off_proc_elmts );
+HYPRE_Int HYPRE_IJVectorSetMaxOnProcElmts ( HYPRE_IJVector vector , HYPRE_Int max_on_proc_elmts );
+HYPRE_Int HYPRE_IJVectorSetOffProcSendElmts ( HYPRE_IJVector vector , HYPRE_Int off_proc_send_elmts );
+HYPRE_Int HYPRE_IJVectorSetOffProcRecvElmts ( HYPRE_IJVector vector , HYPRE_Int off_proc_recv_elmts );
 HYPRE_Int HYPRE_IJVectorSetObjectType ( HYPRE_IJVector vector, HYPRE_Int type );
 HYPRE_Int HYPRE_IJVectorGetObjectType ( HYPRE_IJVector vector, HYPRE_Int *type );
 HYPRE_Int HYPRE_IJVectorGetLocalRange ( HYPRE_IJVector vector, HYPRE_BigInt *jlower,

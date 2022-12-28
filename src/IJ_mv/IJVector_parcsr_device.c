@@ -15,6 +15,11 @@
 #include "_hypre_IJ_mv.h"
 #include "_hypre_utilities.hpp"
 
+#ifndef VECTOR_DEBUG
+#define VECTOR_DEBUG
+#endif
+#undef VECTOR_DEBUG
+
 #if defined(HYPRE_USING_GPU)
 
 /*--------------------------------------------------------------------
@@ -314,6 +319,7 @@ hypreGPUKernel_IJVectorAssemblePar( hypre_DeviceItem &item,
       y[map[i] - offset] += x[i];
    }
 }
+
 
 /*--------------------------------------------------------------------
  * hypre_IJVectorSetAddValuesParDevice
@@ -691,6 +697,291 @@ hypre_IJVectorUpdateValuesDevice( hypre_IJVector      *vector,
                      hypre_VectorData(hypre_ParVectorLocalVector(par_vector)) );
 
    return hypre_error_flag;
+}
+
+/******************************************************************************
+ * Fast Path routines below
+ *****************************************************************************/
+
+/******************************************************************************
+ * hypre_IJVectorAssembleParDeviceFast
+ *****************************************************************************/
+
+/*--------------------------------------------------------------------
+ * hypre_IJVectorAssembleSortAndReduceFast
+ *
+ * helper routine used in hypre_IJVectorAssembleParCSRDeviceFast:
+ * 1. sort A0 with key I0
+ * 2. reduce A0 [with sum]
+ * N0: input size; N1: size after reduction (<= N0)
+ * Note: (I1, A1) are not resized to N1 but have size N0
+ */
+HYPRE_Int
+hypre_IJVectorAssembleSortAndReduceFast( HYPRE_Int  N,
+													  HYPRE_Int  N0,
+													  HYPRE_BigInt *I0,
+													  HYPRE_Complex  *A0,
+													  HYPRE_Int *N1,
+													  HYPRE_BigInt **I1,
+													  HYPRE_Complex **A1 )
+{
+   HYPRE_THRUST_CALL( stable_sort_by_key,
+                      I0 + N,
+                      I0 + N0,
+							 A0 + N);
+
+   HYPRE_BigInt  *I = hypre_TAlloc(HYPRE_BigInt,  N0, HYPRE_MEMORY_DEVICE);
+   HYPRE_Complex *A = hypre_TAlloc(HYPRE_Complex, N0, HYPRE_MEMORY_DEVICE);
+
+   hypre_TMemcpy(I, I0, HYPRE_BigInt,  N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_DEVICE);
+   hypre_TMemcpy(A, A0, HYPRE_Complex,  N, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_DEVICE);
+
+   auto new_end = HYPRE_THRUST_CALL(
+         reduce_by_key,
+         I0 + N,                                                          /* keys_first */
+         I0 + N0,                                                         /* keys_last */
+			A0 + N,                                                          /* values_first */
+         I + N,                                                               /* keys_output */
+         A + N,                                                               /* values_output */
+         thrust::equal_to<HYPRE_BigInt>(),                                /* binary_pred */
+         thrust::plus<HYPRE_Complex>()                                    /* binary_op */);
+
+   *N1 = new_end.first - I;
+   *I1 = I;
+   *A1 = A;
+
+   return hypre_error_flag;
+}
+
+/* y[map[i]-offset] = x[i] or y[map[i]] += x[i] depending on SorA,
+ * same index cannot appear more than once in map */
+__global__ void
+hypreGPUKernel_IJVectorAssembleParSet( hypre_DeviceItem &item,
+													HYPRE_Int m,
+													HYPRE_Int n,
+													HYPRE_Complex *x,
+													HYPRE_BigInt *map,
+													HYPRE_BigInt offset,
+													HYPRE_Complex *y)
+{
+   HYPRE_Int i = hypre_gpu_get_grid_thread_id<1,1>(item);
+
+   if (i >= n)
+   {
+      return;
+   }
+
+   y[map[i+m]-offset] += x[i+m];
+}
+
+
+HYPRE_Int
+hypre_IJVectorAssembleParDeviceFast(hypre_IJVector *vector)
+{
+   MPI_Comm            comm           = hypre_IJVectorComm(vector);
+   hypre_ParVector    *par_vector     = (hypre_ParVector*) hypre_IJVectorObject(vector);
+   hypre_AuxParVector *aux_vector     = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   HYPRE_BigInt       *IJpartitioning = hypre_IJVectorPartitioning(vector);
+   HYPRE_BigInt        vec_start      = IJpartitioning[0];
+   HYPRE_BigInt        vec_stop       = IJpartitioning[1] - 1;
+
+   hypre_Vector       *local_vector   = hypre_ParVectorLocalVector(par_vector);
+   HYPRE_Int           num_vectors    = hypre_VectorNumVectors(local_vector);
+   HYPRE_Complex      *data           = hypre_VectorData(local_vector);
+
+   if (!aux_vector)
+   {
+      return hypre_error_flag;
+   }
+
+   if (!par_vector)
+   {
+      return hypre_error_flag;
+   }
+
+   HYPRE_Int      nelms      = hypre_AuxParVectorCurrentStackElmts(aux_vector);
+   HYPRE_BigInt  *stack_i    = hypre_AuxParVectorStackI(aux_vector);
+   HYPRE_BigInt  *stack_voff = hypre_AuxParVectorStackVoff(aux_vector);
+   HYPRE_Complex *stack_data = hypre_AuxParVectorStackData(aux_vector);
+   char          *stack_sora = hypre_AuxParVectorStackSorA(aux_vector);
+
+	HYPRE_Int     nelms_off_send       = hypre_AuxParVectorUsrOffProcSendElmts(aux_vector);
+	HYPRE_Int     nelms_off_recv       = hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector);
+	HYPRE_Int     nelms_on             = hypre_AuxParVectorUsrOnProcElmts(aux_vector);
+
+#ifdef VECTOR_DEBUG
+	printf("%s %s %d : on=%d, send=%d, recv=%d\n",__FILE__,__FUNCTION__,__LINE__,nelms_on,nelms_off_send,nelms_off_recv);
+#endif
+	if (nelms_off_send>=0 || nelms_off_recv>=0)
+	{
+		HYPRE_Int      new_nnz  = 0; //nelms_off_send;
+		HYPRE_BigInt  *new_i    = NULL;
+		HYPRE_Complex *new_data = NULL;
+
+		if (nelms_off_send>0)
+		{
+			/* set the pointers */
+			new_nnz = nelms_off_send;
+			new_i    = stack_i    + nelms_on;
+			new_data = stack_data + nelms_on;
+		}
+
+		/* reset this */
+		hypre_AuxParVectorCurrentStackElmts(aux_vector) = nelms_on;
+
+		/* enforce this here */
+		hypre_AuxParVectorUsrElmtsFilled(aux_vector) = 1;
+
+		/* send new_i/j/data to remote processes and the receivers call addtovalues */
+		hypre_IJVectorAssembleOffProcValsPar(vector, -1, new_nnz, HYPRE_MEMORY_DEVICE, new_i, new_data);
+	}
+
+	/* Note: the stack might have been changed in hypre_IJVectorAssembleOffProcValsPar,
+	 * so must get the size and the pointers again */
+	nelms      = hypre_AuxParVectorCurrentStackElmts(aux_vector);
+	stack_i    = hypre_AuxParVectorStackI(aux_vector);
+	stack_data = hypre_AuxParVectorStackData(aux_vector);
+
+	if (nelms)
+	{
+		HYPRE_Int      new_nnz;
+		HYPRE_BigInt  *new_i;
+		HYPRE_Complex *new_data;
+
+#ifdef VECTOR_DEBUG
+		HYPRE_Complex * crap0 = hypre_TAlloc(HYPRE_Complex, nelms, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap0, stack_data, HYPRE_Complex, nelms, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+		for (int i=0; i<nelms; ++i)
+		{
+			if (!std::isfinite(crap0[i])) printf("\ti=%d, crap=%lf\n",i,crap0[i]);
+		}
+		hypre_TFree(crap0,    HYPRE_MEMORY_HOST);
+#endif
+
+		/* sort and reduce */
+		hypre_IJVectorAssembleSortAndReduceFast(nelms_on, nelms, stack_i, stack_data, &new_nnz, &new_i, &new_data);
+
+#ifdef VECTOR_DEBUG
+		printf("\t%s %s %d : nelms=%d, new_nnz=%d\n",__FILE__,__FUNCTION__,__LINE__,nelms,new_nnz);
+
+		HYPRE_Complex * crap = hypre_TAlloc(HYPRE_Complex, new_nnz, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap, new_data, HYPRE_Complex, new_nnz, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+		for (int i=0; i<new_nnz; ++i)
+		{
+			if (!std::isfinite(crap[i])) printf("\ti=%d, crap=%lf\n",i,crap[i]);
+		}
+		hypre_TFree(crap,    HYPRE_MEMORY_HOST);
+#endif
+		/* set/add to local vector */
+		dim3 bDim = hypre_GetDefaultDeviceBlockDimension();
+		dim3 gDim = hypre_GetDefaultDeviceGridDimension(new_nnz-nelms_on, "thread", bDim);
+		hypre_TMemcpy(hypre_VectorData(hypre_ParVectorLocalVector(par_vector)), new_data, HYPRE_Complex, nelms_on, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_DEVICE);
+
+		HYPRE_GPU_LAUNCH( hypreGPUKernel_IJVectorAssembleParSet, gDim, bDim, nelms_on, new_nnz-nelms_on, new_data, new_i, vec_start,
+								hypre_VectorData(hypre_ParVectorLocalVector(par_vector)) );
+
+		hypre_TFree(new_i,    HYPRE_MEMORY_DEVICE);
+		hypre_TFree(new_data, HYPRE_MEMORY_DEVICE);
+	}
+
+	hypre_AuxParVectorDestroy(aux_vector);
+	hypre_IJVectorTranslator(vector) = NULL;
+
+	return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------
+ * hypre_IJVectorSetAddValuesParDevice
+ *--------------------------------------------------------------------*/
+
+HYPRE_Int
+hypre_IJVectorSetAddValuesParDeviceFast(hypre_IJVector       *vector,
+													 HYPRE_Int             num_values,
+													 const HYPRE_BigInt   *indices,
+													 const HYPRE_Complex  *values,
+													 const char           *action)
+{
+   HYPRE_BigInt    *IJpartitioning = hypre_IJVectorPartitioning(vector);
+   HYPRE_BigInt     vec_start      = IJpartitioning[0];
+
+   hypre_ParVector *par_vector     = (hypre_ParVector*) hypre_IJVectorObject(vector);
+   hypre_Vector    *local_vector   = hypre_ParVectorLocalVector(par_vector);
+   HYPRE_Int        size           = hypre_VectorSize(local_vector);
+   HYPRE_Int        num_vectors    = hypre_VectorNumVectors(local_vector);
+   HYPRE_Int        component      = hypre_VectorComponent(local_vector);
+   HYPRE_Int        vecstride      = hypre_VectorVectorStride(local_vector);
+
+   const char       SorA           = action[0] == 's' ? 1 : 0;
+
+   if (num_values <= 0)
+   {
+      return hypre_error_flag;
+   }
+
+   /* this is a special use to set/add local values */
+   if (!indices)
+   {
+      HYPRE_Int     num_values2 = hypre_min(size, num_values);
+      HYPRE_BigInt *indices2    = hypre_TAlloc(HYPRE_BigInt, num_values2, HYPRE_MEMORY_DEVICE);
+
+#if defined(HYPRE_USING_SYCL)
+      hypreSycl_sequence(indices2, indices2 + num_values2, vec_start);
+#else
+      HYPRE_THRUST_CALL(sequence, indices2, indices2 + num_values2, vec_start);
+#endif
+
+      hypre_IJVectorSetAddValuesParDeviceFast(vector, num_values2, indices2, values, action);
+
+      hypre_TFree(indices2, HYPRE_MEMORY_DEVICE);
+
+      return hypre_error_flag;
+   }
+
+   hypre_AuxParVector *aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+
+   HYPRE_Int      stack_elmts_max      = hypre_AuxParVectorMaxStackElmts(aux_vector);
+   HYPRE_Int      stack_elmts_current  = hypre_AuxParVectorCurrentStackElmts(aux_vector);
+   HYPRE_Int      stack_elmts_required = stack_elmts_current + num_values;
+   HYPRE_BigInt  *stack_i              = hypre_AuxParVectorStackI(aux_vector);
+   HYPRE_BigInt  *stack_voff           = hypre_AuxParVectorStackVoff(aux_vector);
+   HYPRE_Complex *stack_data           = hypre_AuxParVectorStackData(aux_vector);
+   char          *stack_sora           = hypre_AuxParVectorStackSorA(aux_vector);
+
+	HYPRE_Int     stack_elmts_on_proc       = hypre_AuxParVectorUsrOnProcElmts(aux_vector);
+	HYPRE_Int     stack_elmts_off_proc_send = hypre_AuxParVectorUsrOffProcSendElmts(aux_vector);
+	HYPRE_Int     stack_elmts_off_proc_recv = hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector);
+	char          usr_elmts_filled          = hypre_AuxParVectorUsrElmtsFilled(aux_vector);
+#ifdef VECTOR_DEBUG
+	printf("%s %s %d : on=%d, send=%d, recv=%d, current=%d, filled=%d, num_values=%d\n",__FILE__,__FUNCTION__,__LINE__,
+			 stack_elmts_on_proc,stack_elmts_off_proc_send,stack_elmts_off_proc_recv,stack_elmts_current,usr_elmts_filled,num_values);
+#endif
+
+	/* Neither has been filled ... assign the pointer */
+	if (!stack_i && !stack_data) {
+		hypre_AuxParVectorStackI(aux_vector)    = stack_i    = const_cast<HYPRE_BigInt *>(indices);
+		hypre_AuxParVectorStackData(aux_vector) = stack_data = const_cast<HYPRE_Complex *>(values);
+	}
+
+	/* grab the current version of the stack size ... used for SetAddValues called from IJAssemble */
+	if (SorA==1 && usr_elmts_filled==0) {
+		/* set the current stack position to 0 and set the filled flag to 1 as this routine is going to fill */
+		hypre_assert(stack_elmts_on_proc == num_values);
+		hypre_AuxParVectorCurrentStackElmts(aux_vector) = stack_elmts_current = 0;
+	}
+	else if (SorA==0 && usr_elmts_filled==0)
+	{
+		/* set the current stack position to stack_elmts_on_proc + stack_elmts_off_proc_recv
+			and set the corresponding filled flag to 1 as this routine is going to fill */
+		hypre_assert(stack_elmts_off_proc_send == num_values);
+		hypre_AuxParVectorCurrentStackElmts(aux_vector) = stack_elmts_current = stack_elmts_on_proc;
+	}
+
+	if (usr_elmts_filled) {
+		hypre_TMemcpy(stack_i    + stack_elmts_current, indices, HYPRE_BigInt,  num_values, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_DEVICE);
+		hypre_TMemcpy(stack_data + stack_elmts_current, values,  HYPRE_Complex, num_values, HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_DEVICE);
+	}
+   hypre_AuxParVectorCurrentStackElmts(aux_vector) += num_values;
+	return hypre_error_flag;
 }
 
 #endif

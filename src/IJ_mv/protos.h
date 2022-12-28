@@ -105,6 +105,10 @@ HYPRE_Int hypre_IJMatrixInitializeParCSR_v2(hypre_IJMatrix *matrix,
                                             HYPRE_MemoryLocation memory_location);
 HYPRE_Int hypre_IJMatrixSetConstantValuesParCSRDevice( hypre_IJMatrix *matrix,
                                                        HYPRE_Complex value );
+HYPRE_Int hypre_IJMatrixSetAddValuesParCSRDeviceFast ( hypre_IJMatrix *matrix, HYPRE_Int nrows,
+																		 HYPRE_Int *ncols, const HYPRE_BigInt *rows, const HYPRE_Int *row_indexes, const HYPRE_BigInt *cols,
+																		 const HYPRE_Complex *values, const char *action );
+HYPRE_Int hypre_IJMatrixAssembleParCSRDeviceFast(hypre_IJMatrix *matrix);
 
 /* IJMatrix_petsc.c */
 HYPRE_Int hypre_IJMatrixSetLocalSizePETSc ( hypre_IJMatrix *matrix, HYPRE_Int local_m,
@@ -158,6 +162,9 @@ HYPRE_Int hypre_IJVectorAssembleOffProcValsPar ( hypre_IJVector *vector,
 HYPRE_Int hypre_IJVectorSetAddValuesParDevice(hypre_IJVector *vector, HYPRE_Int num_values,
                                               const HYPRE_BigInt *indices, const HYPRE_Complex *values, const char *action);
 HYPRE_Int hypre_IJVectorAssembleParDevice(hypre_IJVector *vector);
+HYPRE_Int hypre_IJVectorSetAddValuesParDeviceFast(hypre_IJVector *vector, HYPRE_Int num_values,
+																  const HYPRE_BigInt *indices, const HYPRE_Complex *values, const char *action);
+HYPRE_Int hypre_IJVectorAssembleParDeviceFast(hypre_IJVector *vector);
 
 HYPRE_Int hypre_IJVectorUpdateValuesDevice( hypre_IJVector *vector, HYPRE_Int num_values,
                                             const HYPRE_BigInt *indices, const HYPRE_Complex *values, HYPRE_Int action);

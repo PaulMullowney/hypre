@@ -274,6 +274,10 @@ HYPRE_IJVectorSetValues( HYPRE_IJVector        vector,
                          const HYPRE_Complex  *values   )
 {
    hypre_IJVector *vec = (hypre_IJVector *) vector;
+   hypre_AuxParVector *aux_vector     = (hypre_AuxParVector*) hypre_IJVectorTranslator(vec);
+   hypre_ParVector    *par_vector     = (hypre_ParVector*) hypre_IJVectorObject(vec);
+   hypre_Vector       *local_vector   = hypre_ParVectorLocalVector(par_vector);
+   HYPRE_Int           num_vectors    = hypre_VectorNumVectors(local_vector);
 
    if (nvalues == 0) { return hypre_error_flag; }
 
@@ -295,6 +299,7 @@ HYPRE_IJVectorSetValues( HYPRE_IJVector        vector,
       return hypre_error_flag;
    }
 
+
    if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
    {
 #if defined(HYPRE_USING_GPU)
@@ -302,7 +307,15 @@ HYPRE_IJVectorSetValues( HYPRE_IJVector        vector,
 
       if (exec == HYPRE_EXEC_DEVICE)
       {
-         return ( hypre_IJVectorSetAddValuesParDevice(vec, nvalues, indices, values, "set") );
+			if (!aux_vector)
+				return ( hypre_IJVectorSetAddValuesParDevice(vec, nvalues, indices, values, "set") );
+			else if (hypre_AuxParVectorUsrOnProcElmts(aux_vector)>=0 &&
+					 hypre_AuxParVectorUsrOffProcSendElmts(aux_vector)>=0 &&
+					 hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector)>=0 &&
+					 num_vectors == 1)
+				return ( hypre_IJVectorSetAddValuesParDeviceFast(vec, nvalues, indices, values, "set") );
+			else
+				return ( hypre_IJVectorSetAddValuesParDevice(vec, nvalues, indices, values, "set") );
       }
       else
 #endif
@@ -329,6 +342,10 @@ HYPRE_IJVectorAddToValues( HYPRE_IJVector        vector,
                            const HYPRE_Complex  *values )
 {
    hypre_IJVector *vec = (hypre_IJVector *) vector;
+   hypre_AuxParVector *aux_vector     = (hypre_AuxParVector*) hypre_IJVectorTranslator(vec);
+   hypre_ParVector    *par_vector     = (hypre_ParVector*) hypre_IJVectorObject(vec);
+   hypre_Vector       *local_vector   = hypre_ParVectorLocalVector(par_vector);
+   HYPRE_Int           num_vectors    = hypre_VectorNumVectors(local_vector);
 
    if (nvalues == 0) { return hypre_error_flag; }
 
@@ -357,7 +374,15 @@ HYPRE_IJVectorAddToValues( HYPRE_IJVector        vector,
 
       if (exec == HYPRE_EXEC_DEVICE)
       {
-         return ( hypre_IJVectorSetAddValuesParDevice(vec, nvalues, indices, values, "add") );
+			if (!aux_vector)
+				return ( hypre_IJVectorSetAddValuesParDevice(vec, nvalues, indices, values, "add") );
+			else if (hypre_AuxParVectorUsrOnProcElmts(aux_vector)>=0 &&
+					 hypre_AuxParVectorUsrOffProcSendElmts(aux_vector)>=0 &&
+					 hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector)>=0 &&
+					 num_vectors == 1)
+				return ( hypre_IJVectorSetAddValuesParDeviceFast(vec, nvalues, indices, values, "add") );
+			else
+				return ( hypre_IJVectorSetAddValuesParDevice(vec, nvalues, indices, values, "add") );
       }
       else
 #endif
@@ -381,10 +406,19 @@ HYPRE_Int
 HYPRE_IJVectorAssemble( HYPRE_IJVector vector )
 {
    hypre_IJVector *vec = (hypre_IJVector *) vector;
+   hypre_AuxParVector *aux_vector     = (hypre_AuxParVector*) hypre_IJVectorTranslator(vec);
+   hypre_ParVector    *par_vector     = (hypre_ParVector*) hypre_IJVectorObject(vec);
+   hypre_Vector       *local_vector   = hypre_ParVectorLocalVector(par_vector);
+   HYPRE_Int           num_vectors    = hypre_VectorNumVectors(local_vector);
 
    if (!vec)
    {
       hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if (!aux_vector)
+   {
       return hypre_error_flag;
    }
 
@@ -395,7 +429,13 @@ HYPRE_IJVectorAssemble( HYPRE_IJVector vector )
 
       if (exec == HYPRE_EXEC_DEVICE)
       {
-         return ( hypre_IJVectorAssembleParDevice(vec) );
+			if (hypre_AuxParVectorUsrOnProcElmts(aux_vector)>=0 &&
+				 hypre_AuxParVectorUsrOffProcSendElmts(aux_vector)>=0 &&
+				 hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector)>=0 &&
+				 num_vectors == 1)
+				return ( hypre_IJVectorAssembleParDeviceFast(vec) );
+			else
+				return ( hypre_IJVectorAssembleParDevice(vec) );
       }
       else
 #endif
@@ -537,6 +577,90 @@ HYPRE_IJVectorSetMaxOffProcElmts( HYPRE_IJVector vector,
    if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
    {
       return ( hypre_IJVectorSetMaxOffProcElmtsPar(vec, max_off_proc_elmts));
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ * HYPRE_IJVectorSetMaxOnProcElmts
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJVectorSetMaxOnProcElmts( HYPRE_IJVector vector,
+                                 HYPRE_Int      max_on_proc_elmts )
+{
+   hypre_IJVector *vec = (hypre_IJVector *) vector;
+
+   if (!vec)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
+   {
+      return( hypre_IJVectorSetMaxOnProcElmtsPar(vec, max_on_proc_elmts));
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ * HYPRE_IJVectorSetOffProcSendElmts
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJVectorSetOffProcSendElmts( HYPRE_IJVector vector,
+                                   HYPRE_Int      off_proc_send_elmts )
+{
+   hypre_IJVector *vec = (hypre_IJVector *) vector;
+
+   if (!vec)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
+   {
+      return( hypre_IJVectorSetOffProcSendElmtsPar(vec, off_proc_send_elmts));
+   }
+   else
+   {
+      hypre_error_in_arg(1);
+   }
+
+   return hypre_error_flag;
+}
+
+/*--------------------------------------------------------------------------
+ * HYPRE_IJVectorSetOffProcRecvElmts
+ *--------------------------------------------------------------------------*/
+
+HYPRE_Int
+HYPRE_IJVectorSetOffProcRecvElmts( HYPRE_IJVector vector,
+                                   HYPRE_Int      off_proc_recv_elmts )
+{
+   hypre_IJVector *vec = (hypre_IJVector *) vector;
+
+   if (!vec)
+   {
+      hypre_error_in_arg(1);
+      return hypre_error_flag;
+   }
+
+   if ( hypre_IJVectorObjectType(vec) == HYPRE_PARCSR )
+   {
+      return( hypre_IJVectorSetOffProcRecvElmtsPar(vec, off_proc_recv_elmts));
    }
    else
    {

@@ -44,6 +44,11 @@ hypre_AuxParVectorCreate( hypre_AuxParVector **aux_vector_ptr)
    hypre_AuxParVectorUsrOffProcElmts(aux_vector)     = -1;
    hypre_AuxParVectorInitAllocFactor(aux_vector)     = 1.5;
    hypre_AuxParVectorGrowFactor(aux_vector)          = 2.0;
+   /* Additions by Paul Mullowney in ijassemble_device_optimize branch */
+   hypre_AuxParVectorUsrOnProcElmts(aux_vector)      = -1;
+   hypre_AuxParVectorUsrOffProcSendElmts(aux_vector) = -1;
+   hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector) = -1;
+   hypre_AuxParVectorUsrElmtsFilled(aux_vector)      = 0;
 #endif
 
    *aux_vector_ptr = aux_vector;
@@ -66,10 +71,12 @@ hypre_AuxParVectorDestroy( hypre_AuxParVector *aux_vector )
 #if defined(HYPRE_USING_GPU)
       HYPRE_MemoryLocation  memory_location = hypre_AuxParVectorMemoryLocation(aux_vector);
 
-      hypre_TFree(hypre_AuxParVectorStackI(aux_vector),    memory_location);
-      hypre_TFree(hypre_AuxParVectorStackVoff(aux_vector), memory_location);
-      hypre_TFree(hypre_AuxParVectorStackData(aux_vector), memory_location);
-      hypre_TFree(hypre_AuxParVectorStackSorA(aux_vector), memory_location);
+      if (hypre_AuxParVectorUsrElmtsFilled(aux_vector)==0) {
+         hypre_TFree(hypre_AuxParVectorStackI(aux_vector),    memory_location);
+         hypre_TFree(hypre_AuxParVectorStackVoff(aux_vector), memory_location);
+         hypre_TFree(hypre_AuxParVectorStackData(aux_vector), memory_location);
+         hypre_TFree(hypre_AuxParVectorStackSorA(aux_vector), memory_location);
+      }
 #endif
 
       hypre_TFree(aux_vector, HYPRE_MEMORY_HOST);
