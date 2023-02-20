@@ -147,6 +147,84 @@ hypre_IJVectorSetMaxOffProcElmtsPar(hypre_IJVector *vector,
 
 /******************************************************************************
  *
+ * hypre_IJVectorSetMaxOnProcElmtsPar
+ *
+ *****************************************************************************/
+
+HYPRE_Int
+hypre_IJVectorSetMaxOnProcElmtsPar(hypre_IJVector *vector,
+                                   HYPRE_Int       max_on_proc_elmts)
+{
+   hypre_AuxParVector *aux_vector;
+
+   aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   if (!aux_vector)
+   {
+      hypre_AuxParVectorCreate(&aux_vector);
+      hypre_IJVectorTranslator(vector) = aux_vector;
+   }
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP) || defined(HYPRE_USING_SYCL)
+   hypre_AuxParVectorUsrOnProcElmts(aux_vector) = max_on_proc_elmts;
+#endif
+
+   return hypre_error_flag;
+}
+
+/******************************************************************************
+ *
+ * hypre_IJVectorSetOffProcSendElmtsPar
+ *
+ *****************************************************************************/
+
+HYPRE_Int
+hypre_IJVectorSetOffProcSendElmtsPar(hypre_IJVector *vector,
+                                     HYPRE_Int       off_proc_send_elmts)
+{
+   hypre_AuxParVector *aux_vector;
+
+   aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   if (!aux_vector)
+   {
+      hypre_AuxParVectorCreate(&aux_vector);
+      hypre_IJVectorTranslator(vector) = aux_vector;
+   }
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP) || defined(HYPRE_USING_SYCL)
+   hypre_AuxParVectorUsrOffProcSendElmts(aux_vector) = off_proc_send_elmts;
+#endif
+
+   return hypre_error_flag;
+}
+
+/******************************************************************************
+ *
+ * hypre_IJVectorSetOffProcRecvElmtsPar
+ *
+ *****************************************************************************/
+
+HYPRE_Int
+hypre_IJVectorSetOffProcRecvElmtsPar(hypre_IJVector *vector,
+                                     HYPRE_Int       off_proc_recv_elmts)
+{
+   hypre_AuxParVector *aux_vector;
+
+   aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+   if (!aux_vector)
+   {
+      hypre_AuxParVectorCreate(&aux_vector);
+      hypre_IJVectorTranslator(vector) = aux_vector;
+   }
+
+#if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP) || defined(HYPRE_USING_SYCL)
+   hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector) = off_proc_recv_elmts;
+#endif
+
+   return hypre_error_flag;
+}
+
+/******************************************************************************
+ *
  * hypre_IJVectorDistributePar
  *
  * takes an IJVector generated for one processor and distributes it
@@ -1186,8 +1264,24 @@ hypre_IJVectorAssembleOffProcValsPar( hypre_IJVector       *vector,
                     HYPRE_MEMORY_DEVICE, HYPRE_MEMORY_HOST);
 
 #if defined(HYPRE_USING_CUDA) || defined(HYPRE_USING_HIP) || defined(HYPRE_USING_SYCL)
-      hypre_IJVectorSetAddValuesParDevice(vector, off_proc_nelm_recv_cur, off_proc_i_recv_d,
-                                          off_proc_data_recv_d, "add");
+		hypre_AuxParVector *aux_vector = (hypre_AuxParVector*) hypre_IJVectorTranslator(vector);
+		hypre_ParVector *par_vector     = (hypre_ParVector*) hypre_IJVectorObject(vector);
+		hypre_Vector    *local_vector   = hypre_ParVectorLocalVector(par_vector);
+		HYPRE_Int        num_vectors    = hypre_VectorNumVectors(local_vector);
+
+		/* Each of these parameters must be set to enter this fast path */
+		if (!aux_vector)
+			hypre_IJVectorSetAddValuesParDevice(vector, off_proc_nelm_recv_cur, off_proc_i_recv_d,
+															off_proc_data_recv_d, "add");
+		else if (hypre_AuxParVectorUsrOnProcElmts(aux_vector)>=0 &&
+					hypre_AuxParVectorUsrOffProcSendElmts(aux_vector)>=0 &&
+					hypre_AuxParVectorUsrOffProcRecvElmts(aux_vector)>=0 &&
+					num_vectors == 1)
+			hypre_IJVectorSetAddValuesParDeviceFast(vector, off_proc_nelm_recv_cur, off_proc_i_recv_d,
+																 off_proc_data_recv_d, "add");
+		else
+			hypre_IJVectorSetAddValuesParDevice(vector, off_proc_nelm_recv_cur, off_proc_i_recv_d,
+															off_proc_data_recv_d, "add");
 #endif
    }
 
