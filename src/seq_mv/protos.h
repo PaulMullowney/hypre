@@ -344,6 +344,18 @@ HYPRE_Int hypre_CSRMatrixIntSpMVDevice( HYPRE_Int num_rows, HYPRE_Int num_nonzer
                                         HYPRE_Int *d_y );
 
 #if defined(HYPRE_USING_CUSPARSE) || defined(HYPRE_USING_ROCSPARSE) || defined(HYPRE_USING_ONEMKLSPARSE)
+
+#if defined(HYPRE_DEBUG)
+HYPRE_Int checkRowOffsets(HYPRE_Int *d_i, HYPRE_Int nrows, HYPRE_Int nnz, char * name, const char * _FILE_,
+								  const char * _FUNCTION_, int _LINE_, int my_id, HYPRE_Int dump);
+HYPRE_Int checkColumnIndices(HYPRE_Int *d_j, HYPRE_Int nnz, char * name, const char * _FILE_,
+									  const char * _FUNCTION_, int _LINE_, int my_id, HYPRE_Int dump);
+HYPRE_Int checkColumnIndicesSeq(hypre_CSRMatrix *A, char * name, const char * _FILE_,
+										  const char * _FUNCTION_, int _LINE_, int my_id, HYPRE_Int input_nnz);
+HYPRE_Int checkOffdColMapSeq(HYPRE_BigInt *col_map, HYPRE_Int num_col_map, HYPRE_BigInt UpperBound,
+									  char *name, const char * _FILE_, const char * _FUNCTION_, const int _LINE_, int my_id);
+#endif
+
 hypre_CsrsvData* hypre_CsrsvDataCreate();
 void hypre_CsrsvDataDestroy(hypre_CsrsvData *data);
 hypre_GpuMatData* hypre_GpuMatDataCreate();

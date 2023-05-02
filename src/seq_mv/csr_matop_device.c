@@ -17,6 +17,129 @@
 #include "seq_mv.hpp"
 
 #if defined(HYPRE_USING_CUSPARSE) || defined(HYPRE_USING_ROCSPARSE) || defined(HYPRE_USING_ONEMKLSPARSE)
+
+#if defined(HYPRE_DEBUG)
+HYPRE_Int
+checkRowOffsets(HYPRE_Int *d_i, HYPRE_Int nrows, HYPRE_Int nnz, char * name, const char * _FILE_, const char * _FUNCTION_, int _LINE_, int my_id, HYPRE_Int dump)
+{
+	if (nrows && d_i) {
+		HYPRE_Int * crap = hypre_TAlloc(HYPRE_Int, nrows+1, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap, d_i, HYPRE_Int, nrows+1, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+		HYPRE_Int count=0;
+		HYPRE_Int nnz_comp=0;
+		for (int i=0; i<nrows; ++i){
+			nnz_comp+= (crap[i+1]-crap[i]);
+			if (crap[i+1]-crap[i]<0)
+				count++;
+		}
+		if (nnz_comp!=nnz) {
+			hypre_printf("rank=%d %s %s %d : %s=%p, nnz=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,name,d_i,nnz);
+			hypre_printf("\trank=%d BAD : nnz from row offsets != nnz\n",my_id,nnz_comp,nnz);
+		}
+		if (count) {
+			hypre_printf("rank=%d %s %s %d : %s=%p, nnz=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,name,d_i,nnz);
+			hypre_printf("\trank=%d BAD : found %d negative rows counts\n",my_id,count);
+		}
+		if (dump)
+		{
+			char fname[100];
+			sprintf(fname, "%s.row_offsets.bin",name);
+			FILE * fid = fopen(fname,"wb");
+			fwrite(crap, nrows+1, sizeof(HYPRE_Int), fid);
+			fclose(fid);
+		}
+		hypre_TFree(crap, HYPRE_MEMORY_HOST);
+	}
+	return hypre_error_flag;
+}
+
+HYPRE_Int
+checkColumnIndices(HYPRE_Int *d_j, HYPRE_Int nnz, char * name, const char * _FILE_, const char * _FUNCTION_, int _LINE_, int my_id, HYPRE_Int dump)
+{
+	if (nnz && d_j) {
+		HYPRE_Int * crap = hypre_TAlloc(HYPRE_Int, nnz, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap, d_j, HYPRE_Int, nnz, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+		HYPRE_Int count=0;
+		for (int i=0; i<nnz; ++i){
+			if (crap[i]<0)
+			{
+				count++;
+			}
+		}
+		if (count) {
+			hypre_printf("rank=%d %s %s %d : %s=%p, nnz=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,name,d_j,nnz);
+			hypre_printf("\trank=%d BAD : found %d column indices < 0\n",my_id,count);
+		}
+		if (dump)
+		{
+			char fname[100];
+			sprintf(fname, "%s.columns.bin",name);
+			FILE * fid = fopen(fname,"wb");
+			fwrite(crap, nnz, sizeof(HYPRE_Int), fid);
+			fclose(fid);
+		}
+		hypre_TFree(crap, HYPRE_MEMORY_HOST);
+	}
+	return hypre_error_flag;
+}
+
+HYPRE_Int
+checkColumnIndicesSeq(hypre_CSRMatrix *A, char * name, const char * _FILE_, const char * _FUNCTION_, int _LINE_, int my_id, HYPRE_Int input_nnz)
+{
+   HYPRE_Int               *A_i             = hypre_CSRMatrixI(A);
+   HYPRE_Int               *A_j             = hypre_CSRMatrixJ(A);
+   HYPRE_Int               nnz              = hypre_CSRMatrixNumNonzeros(A);
+	if (input_nnz>=0) nnz = input_nnz;
+	if (nnz && A_j) {
+		HYPRE_Int * crap = hypre_TAlloc(HYPRE_Int, nnz, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap, A_j, HYPRE_Int, nnz, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+		HYPRE_Int count=0;
+		for (int i=0; i<nnz; ++i){
+			if (crap[i]<0)
+			{
+				count++;
+			}
+		}
+		if (count) {
+			if (input_nnz>=0)
+				hypre_printf("rank=%d %s %s %d : %s=%p, input nnz=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,name,A,nnz);
+			else
+				hypre_printf("rank=%d %s %s %d : %s=%p, nnz=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,name,A,nnz);
+			hypre_printf("\trank=%d BAD : found %d column indices < 0\n",my_id,count);
+		}
+		hypre_TFree(crap, HYPRE_MEMORY_HOST);
+	}
+	return hypre_error_flag;
+}
+
+
+HYPRE_Int
+checkOffdColMapSeq(HYPRE_BigInt *col_map, HYPRE_Int num_col_map, HYPRE_BigInt UpperBound, char *name,
+						 const char * _FILE_, const char * _FUNCTION_, const int _LINE_, int my_id)
+{
+	if (num_col_map)
+	{
+		HYPRE_BigInt * col_map_host = hypre_TAlloc(HYPRE_BigInt, num_col_map, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(col_map_host, col_map, HYPRE_BigInt, num_col_map, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+
+		HYPRE_Int count=0;
+		for (HYPRE_Int i=0; i<num_col_map; ++i)
+		{
+			if (col_map_host[i]<0)
+			{
+				count++;
+			}
+		}
+		if (count) {
+			hypre_printf("rank=%d %s %s %d : %s=%p, nnz=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,name,col_map,num_col_map);
+			hypre_printf("\trank=%d BAD : found %d offd_col_map < 0\n",my_id,count);
+		}
+		hypre_TFree(col_map_host, HYPRE_MEMORY_HOST);
+	}
+   return hypre_error_flag;
+}
+#endif
+
 hypre_CsrsvData*
 hypre_CsrsvDataCreate()
 {

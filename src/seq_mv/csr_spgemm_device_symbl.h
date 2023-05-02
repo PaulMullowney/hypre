@@ -33,7 +33,7 @@ hypre_spgemm_hash_insert_symbl(
    HYPRE_Int j = 0;
    HYPRE_Int old = -1;
 
-#pragma unroll UNROLL_FACTOR
+	//#pragma unroll UNROLL_FACTOR
    for (HYPRE_Int i = 0; i < SHMEM_HASH_SIZE; i++)
    {
       /* compute the hash value of key */
@@ -475,6 +475,17 @@ hypre_spgemm_symbolic_rownnz( HYPRE_Int  m,
       hypre_SpGemmCreateGlobalHashTable(m, row_ind, num_act_groups, d_rc, SHMEM_HASH_SIZE,
                                         &d_ghash_i, &d_ghash_j, NULL, &ghash_size);
    }
+
+#if defined(HYPRE_DEBUG)
+	HYPRE_Int            my_id;
+	hypre_MPI_Comm_rank(hypre_MPI_COMM_WORLD, &my_id);
+   hypre_printf("rank=%d %s[%d], BIN[%d]: m %d k %d n %d, HASH %c, SHMEM_HASH_SIZE %d, GROUP_SIZE %d, "
+                      "can_fail %d, need_ghash %d, ghash %p size %d\n", my_id,
+                      __FILE__, __LINE__, BIN, m, k, n,
+                      HASH_TYPE, SHMEM_HASH_SIZE, GROUP_SIZE, can_fail, need_ghash, d_ghash_i, ghash_size);
+   hypre_printf("rank=%d kernel spec [%d %d %d] x [%d %d %d] num_groups_per_block=%d\n", my_id, gDim.x, gDim.y, gDim.z, bDim.x, bDim.y,
+					 bDim.z, num_groups_per_block);
+#endif
 
 #ifdef HYPRE_SPGEMM_PRINTF
    HYPRE_SPGEMM_PRINT("%s[%d], BIN[%d]: m %d k %d n %d, HASH %c, SHMEM_HASH_SIZE %d, GROUP_SIZE %d, "

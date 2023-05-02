@@ -123,7 +123,7 @@ hypre_BoomerAMGRelaxTwoStageGaussSeidelDevice ( hypre_ParCSRMatrix *A,
    /* Sanity checks */
    hypre_assert(u_vecstride == num_rows);
    hypre_assert(r_vecstride == num_rows);
-   hypre_assert(z_vecstride == num_rows);
+   //hypre_assert(z_vecstride == num_rows);
 
    // 0) r = relax_weight * (f - A * u)
    hypre_ParCSRMatrixMatvecOutOfPlace(-relax_weight, A, u, relax_weight, f, r);

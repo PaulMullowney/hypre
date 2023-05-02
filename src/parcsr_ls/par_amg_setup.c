@@ -1,3 +1,4 @@
+
 /******************************************************************************
  * Copyright (c) 1998 Lawrence Livermore National Security, LLC and other
  * HYPRE Project Developers. See the top-level COPYRIGHT file for details.
@@ -24,6 +25,59 @@
 /*****************************************************************************
  * hypre_BoomerAMGSetup
  *****************************************************************************/
+
+#if defined(HYPRE_DEBUG)
+HYPRE_Int
+checkColumnIndices(hypre_ParCSRMatrix *A, char * name, const char * _FILE_, const char * _FUNCTION_, int _LINE_, int level, int my_id)
+{
+	hypre_CSRMatrix         *A_diag          = hypre_ParCSRMatrixDiag(A);
+   HYPRE_Int               *A_diag_i        = hypre_CSRMatrixI(A_diag);
+   hypre_CSRMatrix         *A_offd          = hypre_ParCSRMatrixOffd(A);
+   HYPRE_Int               *A_offd_i        = hypre_CSRMatrixI(A_offd);
+   HYPRE_Int               *A_diag_j        = hypre_CSRMatrixJ(A_diag);
+   HYPRE_Int               *A_offd_j        = hypre_CSRMatrixJ(A_offd);
+   HYPRE_Int               nnz_diag         = hypre_CSRMatrixNumNonzeros(A_diag);
+   HYPRE_Int               nnz_offd         = hypre_CSRMatrixNumNonzeros(A_offd);
+   HYPRE_MemoryLocation     memory_location = hypre_ParCSRMatrixMemoryLocation(A);
+	if (nnz_diag && A_diag_j) {
+		HYPRE_Int * crap = hypre_TAlloc(HYPRE_Int, nnz_diag, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap, A_diag_j, HYPRE_Int, nnz_diag, HYPRE_MEMORY_HOST, memory_location);
+		HYPRE_Int count=0;
+		for (int i=0; i<nnz_diag; ++i){
+			if (crap[i]<0 || crap[i]>hypre_ParCSRMatrixGlobalNumRows(A))
+			{
+				//if (count<10)
+				//	hypre_printf("\tBAD : %d : %d\n",i,crap[i]);
+				count++;
+			}
+		}
+		if (count) {
+			hypre_printf("rank=%d %s %s %d level=%d : %s diag=%p, nnz_diag=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,level,name,A_diag,nnz_diag);
+			hypre_printf("\trank=%d BAD : found %d bad column indices\n",my_id,count);
+		}
+		hypre_TFree(crap, HYPRE_MEMORY_HOST);
+	}
+	if (nnz_offd && A_offd_j) {
+		HYPRE_Int * crap = hypre_TAlloc(HYPRE_Int, nnz_offd, HYPRE_MEMORY_HOST);
+		hypre_TMemcpy(crap, A_offd_j, HYPRE_Int, nnz_offd, HYPRE_MEMORY_HOST, memory_location);
+		HYPRE_Int count=0;
+		for (int i=0; i<nnz_offd; ++i){
+			if (crap[i]<0 || crap[i]>hypre_ParCSRMatrixGlobalNumRows(A))
+			{
+				//if (count<10)
+				//		hypre_printf("\tBAD : %d : %d\n",i,crap[i]);
+				count++;
+			}
+		}
+		if (count) {
+			hypre_printf("rank=%d %s %s %d level=%d : %s offd=%p, nnz_offd=%d\n",my_id,_FILE_,_FUNCTION_,_LINE_,level,name,A_offd,nnz_offd);
+			hypre_printf("\trank=%d BAD : found %d bad column indices\n",my_id,count);
+		}
+		hypre_TFree(crap, HYPRE_MEMORY_HOST);
+	}
+	return(0);
+}
+#endif
 
 HYPRE_Int
 hypre_BoomerAMGSetup( void               *amg_vdata,
@@ -962,6 +1016,9 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
 
    while (not_finished_coarsening)
    {
+#if defined(HYPRE_DEBUG)
+		hypre_printf("rank=%d level=%d\n",my_id, level);
+#endif
       /* only do nodal coarsening on a fixed number of levels */
       if (level >= nodal_levels)
       {
@@ -1033,7 +1090,9 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
                       my_id, level);
          fflush(NULL);
       }
-
+#if defined(HYPRE_DEBUG)
+		checkColumnIndices(A_array[level],"Before SOC : A_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
       if (max_levels == 1)
       {
          S = NULL;
@@ -2844,8 +2903,15 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
                {
                   if (hypre_ParAMGDataModularizedMatMat(amg_data))
                   {
+#if defined(HYPRE_DEBUG)
+							checkColumnIndices(A_array[level],"Before RAPKT : A_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+							checkColumnIndices(P,"Before RAPKT : P",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
                      A_H = hypre_ParCSRMatrixRAPKT(P, A_array[level],
                                                    P, keepTranspose);
+#if defined(HYPRE_DEBUG)
+							checkColumnIndices(A_H,"After RAPKT : A_H",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
                   }
                   else
                   {
@@ -2923,6 +2989,9 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
          fflush(NULL);
       }
 
+#if defined(HYPRE_DEBUG)
+		checkColumnIndices(A_array[level],"After Interp : A_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
       /*-------------------------------------------------------------
        * Build coarse-grid operator, A_array[level+1] by R*A*P
        *--------------------------------------------------------------*/
@@ -3030,13 +3099,27 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
             /* Compute standard Galerkin coarse-grid product */
             if (hypre_ParAMGDataModularizedMatMat(amg_data))
             {
+#if defined(HYPRE_DEBUG)
+					checkColumnIndices(A_array[level],"Before RAPKT : A_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+					checkColumnIndices(P_array[level],"Before RAPKT : P_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
                A_H = hypre_ParCSRMatrixRAPKT(P_array[level], A_array[level],
                                              P_array[level], keepTranspose);
+#if defined(HYPRE_DEBUG)
+					checkColumnIndices(A_H,"After RAPKT : A_H",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
             }
             else
             {
+#if defined(HYPRE_DEBUG)
+					checkColumnIndices(A_array[level],"Before RAPKT : A_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+					checkColumnIndices(P_array[level],"Before RAPKT : P_array[level]",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
                hypre_BoomerAMGBuildCoarseOperatorKT(P_array[level], A_array[level],
                                                     P_array[level], keepTranspose, &A_H);
+#if defined(HYPRE_DEBUG)
+					checkColumnIndices(A_H,"After RAPKT : A_H",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
             }
 
             if (Pnew && ns == 1)
@@ -3115,6 +3198,9 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
             not_finished_coarsening = 0;
          }
       }
+#if defined(HYPRE_DEBUG)
+		checkColumnIndices(A_array[level-1],"Done Coarsening Iteration : A_array[level]-1",__FILE__,__FUNCTION__,__LINE__,level,my_id);
+#endif
    }  /* end of coarsening loop: while (not_finished_coarsening) */
 
    HYPRE_ANNOTATE_REGION_BEGIN("%s", "Coarse solve");

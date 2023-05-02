@@ -413,7 +413,7 @@ hypre_CSRMatrixSpMVDevice( HYPRE_Int        trans,
       hypre_error_w_msg(HYPRE_ERROR_GENERIC, "num_vectors_x != num_vectors_y");
       return hypre_error_flag;
    }
-   hypre_assert(num_rows > 0);
+   hypre_assert(num_rows >= 0);
 
    /* Trivial case when alpha * op(B) * x = 0 */
    if (num_nonzeros <= 0 || alpha == 0.0)

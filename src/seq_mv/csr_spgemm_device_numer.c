@@ -49,6 +49,14 @@ hypreDevice_CSRSpGemmNumerWithRownnzUpperboundNoBin( HYPRE_Int       m,
    HYPRE_SPGEMM_PRINT("%s[%d]: max RC %d, min RC %d\n", __FILE__, __LINE__, max_rc, min_rc);
 #endif
 
+#if defined(HYPRE_DEBUG)
+	HYPRE_Int            my_id;
+	hypre_MPI_Comm_rank(hypre_MPI_COMM_WORLD, &my_id);
+   HYPRE_Int max_rc = HYPRE_THRUST_CALL(reduce, d_rc, d_rc + m, 0,      thrust::maximum<HYPRE_Int>());
+   HYPRE_Int min_rc = HYPRE_THRUST_CALL(reduce, d_rc, d_rc + m, max_rc, thrust::minimum<HYPRE_Int>());
+   hypre_printf("rank=%d %s[%d]: max RC %d, min RC %d\n", my_id, __FILE__, __LINE__, max_rc, min_rc);
+#endif
+
    /* if rc contains exact rownnz: can allocate the final C=(ic,jc,c) directly;
       if rc contains upper bound : it is a temporary space that is more than enough to store C */
    HYPRE_Int     *d_ic = hypre_TAlloc(HYPRE_Int, m + 1, HYPRE_MEMORY_DEVICE);
@@ -61,7 +69,6 @@ hypreDevice_CSRSpGemmNumerWithRownnzUpperboundNoBin( HYPRE_Int       m,
 #ifdef HYPRE_SPGEMM_PRINTF
    HYPRE_SPGEMM_PRINT("%s[%d]: nnzC %d\n", __FILE__, __LINE__, nnzC);
 #endif
-
 
    /* even with exact rownnz, still may need global hash, since shared hash is smaller than symbol */
    hypre_spgemm_numerical_with_rownnz<BIN, SHMEM_HASH_SIZE, GROUP_SIZE, false>

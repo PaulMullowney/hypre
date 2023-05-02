@@ -206,6 +206,13 @@ hypreDevice_CSRSpGemmRownnzNoBin( HYPRE_Int  m,
 
       if (num_failed_rows)
       {
+#if defined(HYPRE_DEBUG)
+			HYPRE_Int            my_id;
+			hypre_MPI_Comm_rank(hypre_MPI_COMM_WORLD, &my_id);
+         hypre_printf("rank=%d [%s, %d]: num of failed rows %d (%.2f)\n", my_id, __FILE__, __LINE__,
+							 num_failed_rows, num_failed_rows / (m + 0.0) );
+#endif
+
 #ifdef HYPRE_SPGEMM_PRINTF
          HYPRE_SPGEMM_PRINT("[%s, %d]: num of failed rows %d (%.2f)\n", __FILE__, __LINE__,
                             num_failed_rows, num_failed_rows / (m + 0.0) );
