@@ -43,7 +43,8 @@ hypre_BoomerAMGCreate2ndSDevice( hypre_ParCSRMatrix  *S,
    hypre_MPI_Comm_size(comm, &num_proc);
    hypre_MPI_Comm_rank(comm, &myid);
    */
-
+   HYPRE_Int my_id;
+   hypre_MPI_Comm_rank(hypre_ParCSRMatrixComm(S), &my_id);
    /* 1. Create new matrix with added diagonal */
    hypre_GpuProfilingPushRange("Setup");
 
@@ -60,6 +61,14 @@ hypre_BoomerAMGCreate2ndSDevice( hypre_ParCSRMatrix  *S,
 
    if (!hypre_ParCSRMatrixCommPkg(S))
    {
+	   {
+			char fname[50];
+			sprintf(fname, "debug_%d.txt",my_id);
+			FILE * fid = fopen(fname,"at");
+			fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+			fflush(fid);
+			fclose(fid);
+		}
       hypre_MatvecCommPkgCreate(S);
    }
 

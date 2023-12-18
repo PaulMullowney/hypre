@@ -1578,7 +1578,25 @@ hypre_ParCSRMatrixGenerate1DCFDevice( hypre_ParCSRMatrix  *A,
    /* send_buf: global F/C indices. Note F-pts "x" are saved as "-x-1" */
    send_buf = hypre_TAlloc(HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_DEVICE);
 
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+		fflush(fid);
+		fclose(fid);
+	}
+
    hypre_ParCSRCommPkgCopySendMapElmtsToDevice(comm_pkg);
+
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+		fflush(fid);
+		fclose(fid);
+	}
 
    FFFC_functor functor(F_first, C_first);
 #if defined(HYPRE_USING_SYCL)
@@ -1588,13 +1606,55 @@ hypre_ParCSRMatrixGenerate1DCFDevice( hypre_ParCSRMatrix  *A,
                      oneapi::dpl::make_transform_iterator(zip, functor),
                      send_buf );
 #else
-   HYPRE_THRUST_CALL( gather,
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d : Buffer=%p  num_elem_send=%d, send_buf=%p, n_local=%d\n",
+				  __FILE__, __FUNCTION__, __LINE__, hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg), num_elem_send, send_buf, n_local);
+		fflush(fid);
+		fclose(fid);
+	}
+
+   HYPRE_BigInt * houtput = hypre_TAlloc(HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_HOST);
+	HYPRE_BigInt * doutput = hypre_TAlloc(HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_DEVICE);
+	HYPRE_THRUST_CALL( copy,
+							 thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC,               CF_marker)),              functor),
+							 thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC+num_elem_send, CF_marker+num_elem_send)),functor),
+							 doutput);
+	hypre_TMemcpy(houtput, doutput, HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+	hypre_TFree(doutput, HYPRE_MEMORY_DEVICE);
+
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		for (int i=0; i<5; ++i)
+			fprintf(fid, " ===== %s %s Line=%d : output[%d]=%ld, output[%d]=%ld=====\n",
+					  __FILE__, __FUNCTION__, __LINE__,i,houtput[i],num_elem_send-1-i,houtput[num_elem_send-1-i]);
+		fflush(fid);
+		fclose(fid);
+	}
+
+	hypre_TFree(houtput, HYPRE_MEMORY_HOST);
+
+	HYPRE_THRUST_CALL( gather,
                       hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg),
                       hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg) + num_elem_send,
                       thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC, CF_marker)),
                                                       functor),
                       send_buf );
 #endif
+
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d : Buffer=%p  num_elem_send=%d, send_buf=%p, n_local=%d\n",
+				  __FILE__, __FUNCTION__, __LINE__, hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg), num_elem_send, send_buf, n_local);
+		fflush(fid);
+		fclose(fid);
+	}
 
 #if defined(HYPRE_USING_THRUST_NOSYNC)
    /* RL: make sure send_buf is ready before issuing GPU-GPU MPI */

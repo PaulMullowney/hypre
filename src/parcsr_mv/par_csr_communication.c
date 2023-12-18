@@ -1174,7 +1174,18 @@ hypre_MatvecCommPkgCreate ( hypre_ParCSRMatrix *A )
    HYPRE_Int            num_cols_offd   = hypre_CSRMatrixNumCols(hypre_ParCSRMatrixOffd(A));
    HYPRE_BigInt         global_num_cols = hypre_ParCSRMatrixGlobalNumCols(A);
 
+	HYPRE_Int my_id;
+   hypre_MPI_Comm_rank(comm, &my_id);
+
    HYPRE_ANNOTATE_FUNC_BEGIN;
+	{
+	   char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+		fflush(fid);
+		fclose(fid);
+	}
 
    /* Create the assumed partition and should own it */
    if (apart == NULL)

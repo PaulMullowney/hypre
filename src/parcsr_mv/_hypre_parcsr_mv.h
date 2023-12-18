@@ -123,6 +123,20 @@ typedef struct _hypre_ParCSRCommPkg
 static inline void
 hypre_ParCSRCommPkgCopySendMapElmtsToDevice(hypre_ParCSRCommPkg *comm_pkg)
 {
+   HYPRE_Int my_id;
+   hypre_MPI_Comm_rank(hypre_ParCSRCommPkgComm(comm_pkg), &my_id);
+   {
+	   char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d num_sends=%d SendMapElmts=%p=====\n",
+				  __FILE__, __FUNCTION__, __LINE__,
+				  hypre_ParCSRCommPkgNumSends(comm_pkg),
+				  hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg));
+		fflush(fid);
+		fclose(fid);
+	}
+
 #if defined(HYPRE_USING_GPU) || defined(HYPRE_USING_DEVICE_OPENMP)
    HYPRE_Int num_sends = hypre_ParCSRCommPkgNumSends(comm_pkg);
 
@@ -132,7 +146,7 @@ hypre_ParCSRCommPkgCopySendMapElmtsToDevice(hypre_ParCSRCommPkg *comm_pkg)
          hypre_TAlloc(HYPRE_Int,
                       hypre_ParCSRCommPkgSendMapStart(comm_pkg, num_sends),
                       HYPRE_MEMORY_DEVICE);
-
+   
       hypre_TMemcpy(hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg),
                     hypre_ParCSRCommPkgSendMapElmts(comm_pkg),
                     HYPRE_Int,
@@ -143,6 +157,17 @@ hypre_ParCSRCommPkgCopySendMapElmtsToDevice(hypre_ParCSRCommPkg *comm_pkg)
 #else
    HYPRE_UNUSED_VAR(comm_pkg);
 #endif
+   {
+	   char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d num_sends=%d SendMapElmts=%p=====\n",
+				  __FILE__, __FUNCTION__, __LINE__,
+				  hypre_ParCSRCommPkgNumSends(comm_pkg),
+				  hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg));
+		fflush(fid);
+		fclose(fid);
+	}
 }
 
 /*--------------------------------------------------------------------------
