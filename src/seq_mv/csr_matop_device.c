@@ -747,7 +747,7 @@ hypre_CSRMatrixSplitDevice_core( HYPRE_Int      job,
        char fname[50];
        sprintf(fname, "debug_%d.txt",my_id);
        FILE * fid = fopen(fname,"at");
-       fprintf(fid, " ===== %s %s Line=%d diag nnz=%ld offd nnz=%ld=====\n",  __FILE__, __FUNCTION__, __LINE__,
+       fprintf(fid, " ===== %s %s Line=%d diag nnz=%d offd nnz=%d=====\n",  __FILE__, __FUNCTION__, __LINE__,
 	       B_ext_diag_nnz, B_ext_offd_nnz);
        fflush(fid);
        fclose(fid);	  
