@@ -1292,6 +1292,14 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
                hypre_BoomerAMGCoarseParms(comm, local_num_vars,
                                           1, dof_func_array[level], CF_marker_array[level],
                                           &coarse_dof_func, coarse_pnts_global1);
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+		fflush(fid);
+		fclose(fid);
+	}
                hypre_BoomerAMGCreate2ndS(S, CF_marker, num_paths,
                                          coarse_pnts_global1, &S2);
                if (coarsen_type == 10)
@@ -1398,6 +1406,14 @@ hypre_BoomerAMGSetup( void               *amg_vdata,
                hypre_BoomerAMGCoarseParms(comm, local_num_vars / num_functions,
                                           1, dof_func_array[level], CFN_marker,
                                           &coarse_dof_func, coarse_pnts_global1);
+	{
+		char fname[50];
+		sprintf(fname, "debug_%d.txt",my_id);
+		FILE * fid = fopen(fname,"at");
+		fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+		fflush(fid);
+		fclose(fid);
+	}
                hypre_BoomerAMGCreate2ndS(SN, hypre_IntArrayData(CFN_marker), num_paths,
                                          coarse_pnts_global1, &S2);
                if (coarsen_type == 10)

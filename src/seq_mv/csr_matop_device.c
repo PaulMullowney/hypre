@@ -615,6 +615,18 @@ hypre_CSRMatrixSplitDevice_core( HYPRE_Int      job,
    }
    else
    {
+     {
+       HYPRE_Int my_id;
+       hypre_MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+       
+       char fname[50];
+       sprintf(fname, "debug_%d.txt",my_id);
+       FILE * fid = fopen(fname,"at");
+       fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+       fflush(fid);
+       fclose(fid);	  
+     }
+
 #if defined(HYPRE_USING_SYCL)
       auto first = oneapi::dpl::make_zip_iterator(B_ext_ii, B_ext_bigj, B_ext_data);
       auto new_end = hypreSycl_copy_if(
@@ -688,6 +700,18 @@ hypre_CSRMatrixSplitDevice_core( HYPRE_Int      job,
    }
    else
    {
+     {
+       HYPRE_Int my_id;
+       hypre_MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+       
+       char fname[50];
+       sprintf(fname, "debug_%d.txt",my_id);
+       FILE * fid = fopen(fname,"at");
+       fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+       fflush(fid);
+       fclose(fid);	  
+     }
+
 #if defined(HYPRE_USING_SYCL)
       auto first = oneapi::dpl::make_zip_iterator(B_ext_ii, B_ext_bigj, B_ext_data);
       auto new_end = hypreSycl_copy_if(
@@ -716,6 +740,18 @@ hypre_CSRMatrixSplitDevice_core( HYPRE_Int      job,
    hypre_CSRMatrixMergeColMapOffd(num_cols_offd_B, col_map_offd_B, B_ext_offd_nnz, B_ext_offd_bigj,
                                   &num_cols_offd_C, &col_map_offd_C, &map_B_to_C);
 
+     {
+       HYPRE_Int my_id;
+       hypre_MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+       
+       char fname[50];
+       sprintf(fname, "debug_%d.txt",my_id);
+       FILE * fid = fopen(fname,"at");
+       fprintf(fid, " ===== %s %s Line=%d diag nnz=%ld offd nnz=%ld=====\n",  __FILE__, __FUNCTION__, __LINE__,
+	       B_ext_diag_nnz, B_ext_offd_nnz);
+       fflush(fid);
+       fclose(fid);	  
+     }
 #if defined(HYPRE_USING_SYCL)
    if (num_cols_offd_C > 0 && B_ext_offd_nnz > 0)
    {

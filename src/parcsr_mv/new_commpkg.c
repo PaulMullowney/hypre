@@ -151,8 +151,7 @@ hypre_ParCSRCommPkgCreateApart_core(
    hypre_printf("myid = %d, length of apart = %d\n", myid, apart->length);
 
 #endif
-
-   /*-----------------------------------------------------------
+   /*-0----------------------------------------------------------
     *  Everyone knows where their assumed range is located
     * (because of the assumed partition object (apart).
     *  For the comm. package, each proc must know it's receive
@@ -473,6 +472,15 @@ hypre_ParCSRCommPkgCreateApart_core(
       {
          //send_proc_obj.elements[i] -= first_col_diag;
          tmp_elements[i] = (HYPRE_Int)(send_proc_obj.elements[i] - first_col_diag);
+	 if (tmp_elements[i]<0)
+	   {
+	     char fname[50];
+	     sprintf(fname, "debug_%d.txt",myid);
+	     FILE * fid = fopen(fname,"at");
+	     fprintf(fid, " ===== %s %s Line=%d : tmp_elements[%d] = %d, %d, %d\n",  __FILE__, __FUNCTION__, __LINE__,i,tmp_elements[i],send_proc_obj.elements[i],first_col_diag);
+	     fflush(fid);
+	     fclose(fid);
+	   }
       }
       *p_send_map_elements =  tmp_elements;
       hypre_TFree(send_proc_obj.elements, HYPRE_MEMORY_HOST);

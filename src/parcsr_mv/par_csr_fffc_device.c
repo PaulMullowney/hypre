@@ -38,10 +38,10 @@ struct FFFC_functor : public thrust::unary_function<Tuple, HYPRE_BigInt>
    __host__ __device__
    HYPRE_BigInt operator()(const Tuple& t) const
    {
-      const HYPRE_Int local_idx = thrust::get<0>(t);
-      const HYPRE_Int cf_marker = thrust::get<1>(t);
-      const HYPRE_Int s = cf_marker < 0;
-      const HYPRE_Int m = 1 - 2 * s;
+      const HYPRE_BigInt local_idx = thrust::get<0>(t);
+      const HYPRE_BigInt cf_marker = thrust::get<1>(t);
+      const HYPRE_BigInt s = cf_marker < 0;
+      const HYPRE_BigInt m = 1 - 2 * s;
       return m * (local_idx + CF_first[s] + s);
    }
 };
@@ -1616,27 +1616,36 @@ hypre_ParCSRMatrixGenerate1DCFDevice( hypre_ParCSRMatrix  *A,
 		fclose(fid);
 	}
 
-   HYPRE_BigInt * houtput = hypre_TAlloc(HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_HOST);
-	HYPRE_BigInt * doutput = hypre_TAlloc(HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_DEVICE);
-	HYPRE_THRUST_CALL( copy,
-							 thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC,               CF_marker)),              functor),
-							 thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC+num_elem_send, CF_marker+num_elem_send)),functor),
-							 doutput);
-	hypre_TMemcpy(houtput, doutput, HYPRE_BigInt, num_elem_send, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
-	hypre_TFree(doutput, HYPRE_MEMORY_DEVICE);
-
+	if (n_local)
 	{
-		char fname[50];
-		sprintf(fname, "debug_%d.txt",my_id);
-		FILE * fid = fopen(fname,"at");
-		for (int i=0; i<5; ++i)
-			fprintf(fid, " ===== %s %s Line=%d : output[%d]=%ld, output[%d]=%ld=====\n",
-					  __FILE__, __FUNCTION__, __LINE__,i,houtput[i],num_elem_send-1-i,houtput[num_elem_send-1-i]);
-		fflush(fid);
-		fclose(fid);
-	}
+	  HYPRE_BigInt * houtput = hypre_TAlloc(HYPRE_BigInt, n_local, HYPRE_MEMORY_HOST);
+	  HYPRE_BigInt * doutput = hypre_TAlloc(HYPRE_BigInt, n_local, HYPRE_MEMORY_DEVICE);
+	  HYPRE_THRUST_CALL( copy,
+			     thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC,         CF_marker)),        functor),
+			     thrust::make_transform_iterator(thrust::make_zip_iterator(thrust::make_tuple(map2FC+n_local, CF_marker+n_local)),functor),
+			     doutput);
+	  hypre_TMemcpy(houtput, doutput, HYPRE_BigInt, n_local, HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
+	  hypre_TFree(doutput, HYPRE_MEMORY_DEVICE);
+	  
+	  char fname[50];
+	  sprintf(fname, "debug_%d.txt",my_id);
+	  FILE * fid = fopen(fname,"at");
 
-	hypre_TFree(houtput, HYPRE_MEMORY_HOST);
+	  HYPRE_Int * send_map_elmts = hypre_ParCSRCommPkgSendMapElmts(comm_pkg);
+	  HYPRE_Int * hsend_buf = hypre_TAlloc(HYPRE_Int, num_elem_send, HYPRE_MEMORY_HOST);
+	  
+	  for (int i=0; i<num_elem_send; ++i)
+	    {
+	      fprintf(fid, " ===== %s %s Line=%d : %d of %d, send_map_elmts=%d=====\n",
+		      __FILE__, __FUNCTION__, __LINE__,i,n_local,send_map_elmts[i]);
+	      hsend_buf[i] = houtput[send_map_elmts[i]];
+	    }
+	  fflush(fid);
+	  fclose(fid);	  
+	  
+	  hypre_TFree(hsend_buf, HYPRE_MEMORY_HOST);
+	  hypre_TFree(houtput, HYPRE_MEMORY_HOST);
+	}
 
 	HYPRE_THRUST_CALL( gather,
                       hypre_ParCSRCommPkgDeviceSendMapElmts(comm_pkg),

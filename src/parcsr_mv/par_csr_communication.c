@@ -1170,22 +1170,31 @@ hypre_MatvecCommPkgCreate ( hypre_ParCSRMatrix *A )
    hypre_ParCSRCommPkg *comm_pkg;
 
    HYPRE_BigInt         first_col_diag  = hypre_ParCSRMatrixFirstColDiag(A);
+   HYPRE_BigInt         last_col_diag   = hypre_ParCSRMatrixLastColDiag(A);
    HYPRE_BigInt        *col_map_offd    = hypre_ParCSRMatrixColMapOffd(A);
    HYPRE_Int            num_cols_offd   = hypre_CSRMatrixNumCols(hypre_ParCSRMatrixOffd(A));
    HYPRE_BigInt         global_num_cols = hypre_ParCSRMatrixGlobalNumCols(A);
 
-	HYPRE_Int my_id;
+   HYPRE_Int my_id;
    hypre_MPI_Comm_rank(comm, &my_id);
 
    HYPRE_ANNOTATE_FUNC_BEGIN;
-	{
-	   char fname[50];
-		sprintf(fname, "debug_%d.txt",my_id);
-		FILE * fid = fopen(fname,"at");
-		fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
-		fflush(fid);
-		fclose(fid);
-	}
+   {
+     char fname[50];
+     sprintf(fname, "debug_%d.txt",my_id);
+     FILE * fid = fopen(fname,"at");
+     fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+     
+     for (int i=0; i<num_cols_offd; ++i)
+       {
+	 HYPRE_Int c = col_map_offd[i];
+	 if (c<0 || c>=global_num_cols || (c>=first_col_diag && c<=last_col_diag))
+	   fprintf(fid, " ===== %s %s Line=%d : %d of %d, BAD col_map_off_d=%d=====\n",
+		   __FILE__, __FUNCTION__, __LINE__,i,num_cols_offd,col_map_offd[i]);
+       }
+     fflush(fid);
+     fclose(fid);	  
+   }
 
    /* Create the assumed partition and should own it */
    if (apart == NULL)

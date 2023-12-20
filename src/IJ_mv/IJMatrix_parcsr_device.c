@@ -964,6 +964,32 @@ hypre_IJMatrixAssembleParCSRDevice(hypre_IJMatrix *matrix)
                        num_cols_offd_new,
                        HYPRE_MEMORY_HOST, HYPRE_MEMORY_DEVICE);
 
+
+	 {
+	   HYPRE_Int my_id;
+	   hypre_MPI_Comm_rank(comm, &my_id);
+
+	   char fname[50];
+	   sprintf(fname, "debug_%d.txt",my_id);
+	   FILE * fid = fopen(fname,"at");
+	   fprintf(fid, " ===== %s %s Line=%d=====\n",  __FILE__, __FUNCTION__, __LINE__);
+
+	   HYPRE_BigInt         first_col_diag  = hypre_ParCSRMatrixFirstColDiag(par_matrix);
+	   HYPRE_BigInt         last_col_diag   = hypre_ParCSRMatrixLastColDiag(par_matrix);
+	   HYPRE_BigInt         global_num_cols = hypre_ParCSRMatrixGlobalNumCols(par_matrix);
+	   
+	   for (int i=0; i<num_cols_offd_new; ++i)
+	     {
+	       HYPRE_BigInt c = hypre_ParCSRMatrixColMapOffd(par_matrix)[i];
+	       if (c<0 || c>=global_num_cols || (c>=first_col_diag && c<=last_col_diag))
+		 fprintf(fid, " ===== %s %s Line=%d : %d of %d, BAD col_map_off_d=%d=====\n",
+			 __FILE__, __FUNCTION__, __LINE__,i,num_cols_offd_new,c);
+	     }
+	   fflush(fid);
+	   fclose(fid);	  
+	 }
+	 
+	 
          col_map_offd_new = NULL;
       }
 
